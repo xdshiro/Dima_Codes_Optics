@@ -1,0 +1,104 @@
+# Optical Beams and Singularities
+
+This package provides a set of tools for generating, manipulating, and visualizing optical beams and their singularities. The package is divided into four main modules:
+
+1. `beams_and_pulses.py`
+2. `functions_general.py`
+3. `plotings.py`
+4. `singularities.py`
+
+## Modules
+
+### beams_and_pulses.py
+
+This module includes different optical beam shapes and functions for generating and manipulating various optical beam configurations.
+
+**Functions:**
+- `LG_simple`: Generates a classic Laguerre-Gaussian (LG) beam.
+- `trefoil`: Constructs a field based on a trefoil knot configuration using a combination of LG beams.
+- `hopf`: Constructs a field based on a Hopf link configuration using a combination of LG beams.
+- `milnor_Pol_u_v_any`: Creates a Milnor polynomial of the form u^a - v^b.
+- `LG_combination`: Creates a field by combining multiple LG beams according to specified coefficients and modes.
+
+### functions_general.py
+
+This module includes various general-purpose utility functions for vector calculations, mesh creation, interpolation, and integration.
+
+**Functions:**
+- `rho`: Calculates the magnitude of a vector.
+- `phi`: Computes the angle phi in the plane.
+- `dots_move_center`: Moves a set of dots to the center of the object.
+- `distance_between_points`: Calculates the distance between two points in any dimension.
+- `create_mesh_XYZ`: Creates a 3D mesh using np.meshgrid.
+- `create_mesh_XY_old`: Creates a 2D mesh using np.meshgrid with old parameters.
+- `create_mesh_XY`: Creates a 2D mesh using np.meshgrid with new parameters.
+- `interpolation_real`: Interpolates any real 2D matrix into a function.
+- `interpolation_complex`: Interpolates a complex 2D array of any data into a function.
+- `integral_of_function_1D`: Integrates a function over a 1D range, handling complex values.
+- `arrays_from_mesh`: Returns the tuple of x1Array, x2Array, etc., from a mesh.
+- `reading_file_mat`: Reads a .mat file and converts one of its fields into a numpy array.
+- `dots3D_rescale`: Rescales dots from indices to physical coordinates based on a mesh.
+- `random_list`: Modifies values by adding a random component within a specified range.
+- `propagator_split_step_3D`: Propagates a field in 3D using the split-step Fourier method.
+- `propagator_split_step_3D_linear`: Linearly propagates a field in 3D using the split-step Fourier method.
+- `one_plane_propagator`: Propagates a field from a single plane both forward and backward in z.
+- `cut_filter`: Applies a circular or rectangular filter to a field.
+
+### plotings.py
+
+This module includes various functions for plotting and visualizing data in 2D and 3D, as well as functions for creating interactive plots using Plotly.
+
+**Functions:**
+- `plot_2D`: Plots a 2D field using Matplotlib.
+- `plot_scatter_2D`: Creates a 2D scatter plot using Matplotlib.
+- `plot_plane_go`: Plots a cross-section XY plane in 3D using Plotly.
+- `plot_3D_dots_go`: Plots 3D dots interactively in the browser using Plotly.
+- `plot_3D_density`: Plots 3D density in the browser using Plotly.
+- `plot_scatter_3D`: Plots 3D scatter points using Matplotlib.
+- `box_set_go`: Sets up a 3D plot with box boundaries using Plotly.
+- `plotDots`: Plots an array of dots interactively in the browser using Plotly.
+
+### singularities.py
+
+This module includes classes of different singularities and functions for processing singularities in optical fields.
+
+**Functions:**
+- `plot_knot_dots`: Plots 3D or 2D scatters from the field or dictionary with dots.
+- `plane_singularities_finder_9dots`: Helper function to find singularities in a 2D plane using 9 dots.
+- `plane_singularities_finder_4dots`: Helper function to find singularities in a 2D plane using 4 dots.
+- `fill_dict_as_matrix_helper`: Helper function to fill a dictionary as a matrix.
+- `cut_non_oam`: Finds singularities and returns a 3D array with values and non-values.
+- `get_singularities`: Simplifies cut_non_oam by returning an array of singularities.
+- `W_energy`: Calculates the total power in the Oxy plane.
+- `Jz_calc_no_conj`: Calculates the z-component of the angular momentum without conjugation.
+- `integral_number2_OAMcoefficients_FengLiPaper`: Calculates the weight of OAM at a radius using FengLi paper's method.
+- `integral_number3_OAMpower_FengLiPaper`: Calculates the total power in the OAM with a specific charge.
+- `knot_build_pyknotid`: Builds a normalized pyknotid knot.
+- `fill_dotsKnotList_mine`: Fills a list of dots by removing charge sign and arranging them into a list.
+- `dots_dens_reduction`: Reduces the density of singularity lines by removing extra dots.
+
+## Installation
+
+To install the package, simply clone this repository and include the modules in your Python path.
+
+```bash
+git clone <repository_url>
+Usage
+You can import the modules and use the functions as needed. For example:
+
+python
+Copy code
+from beams_and_pulses import LG_simple
+import numpy as np
+
+# Define spatial coordinates
+x = np.linspace(-10, 10, 100)
+y = np.linspace(-10, 10, 100)
+X, Y = np.meshgrid(x, y)
+
+# Generate an LG beam
+beam = LG_simple(X, Y, l=1, p=0, width=1, k0=1)
+
+# Plot the beam
+import plotings
+plotings.plot_2D(np.abs(beam)**2, x, y, title='LG Beam')
