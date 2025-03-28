@@ -436,13 +436,3 @@ def plotDots(dots, dots_bound=None, show=True, color='black', size=15, width=185
         fig.show()
     return fig
 
-
-if __name__ == '__main__':
-    k1 = 80
-    k2 = 70
-    colors = np.array([[255, 255, k1], [255, 127, k1], [255, 0, k1],
-                       [255, k2, 255], [127, k2, 255], [0, k2, 255]]) / 255
-    plt.scatter([0, 1, 2, 0, 1, 2], [0, 0, 0, 1, 1, 1], s=80000, marker='s', c=colors)
-    plt.xlim(-1.1, 1.75)
-    # plt.ylim(-0, 0.8)
-    plt.show()

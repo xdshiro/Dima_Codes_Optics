@@ -34,7 +34,7 @@ import math
 
 np.seterr(divide='ignore', invalid='ignore')
 
-def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0, z0=0):
+def LG_simple(x, y, z=0, l=1, p=0, width=1, k0=1, x0=0, y0=0, z0=0, **kwargs):
     """
     Generates a classic Laguerre-Gaussian (LG) beam.
 
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     The following code creates a mesh grid, generates a Milnor polynomial field with specified parameters,
     and plots a 2D slice of the beam at a particular z-coordinate.
     """
-    import my_functions.plotings as pl
+    import extra_functions_package.plotings as pl
 
     xyzMesh = fg.create_mesh_XYZ(4, 4, 1, zMin=None)
     beam = milnor_Pol_u_v_any(xyzMesh, uOrder=2, vOrder=2, H=1)

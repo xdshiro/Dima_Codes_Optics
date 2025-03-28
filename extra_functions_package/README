@@ -1,104 +1,143 @@
-# Optical Beams and Singularities
+Optical Field Processing Package
 
-This package provides a set of tools for generating, manipulating, and visualizing optical beams and their singularities. The package is divided into four main modules:
+This package provides a comprehensive suite of tools for generating, processing, and visualizing optical fields, including laser beams, Laguerre-Gaussian (LG) modes, and singularities. It includes functions for simulating optical turbulence, finding beam centers, manipulating knots, and analyzing singularities in 3D optical fields.
 
-1. `beams_and_pulses.py`
-2. `functions_general.py`
-3. `plotings.py`
-4. `singularities.py`
+Features
 
-## Modules
+Knot Field Calculation & Visualization: Compute and visualize braid knot fields using Laguerre-Gaussian (LG) modes.
 
-### beams_and_pulses.py
+Optical Beam Generation: Generate various optical beam configurations, including LG beams and Milnor polynomials.
 
-This module includes different optical beam shapes and functions for generating and manipulating various optical beam configurations.
+Beam Center Detection: Find the center of laser beams using interpolation and normalization techniques.
 
-**Functions:**
-- `LG_simple`: Generates a classic Laguerre-Gaussian (LG) beam.
-- `trefoil`: Constructs a field based on a trefoil knot configuration using a combination of LG beams.
-- `hopf`: Constructs a field based on a Hopf link configuration using a combination of LG beams.
-- `milnor_Pol_u_v_any`: Creates a Milnor polynomial of the form u^a - v^b.
-- `LG_combination`: Creates a field by combining multiple LG beams according to specified coefficients and modes.
+Singularity Processing: Detect, filter, and analyze singularities in optical fields.
 
-### functions_general.py
+Optical Turbulence Simulation: Generate phase screens and propagate beams through turbulent media.
 
-This module includes various general-purpose utility functions for vector calculations, mesh creation, interpolation, and integration.
+2D & 3D Plotting: Visualize complex optical fields using Matplotlib and Plotly.
 
-**Functions:**
-- `rho`: Calculates the magnitude of a vector.
-- `phi`: Computes the angle phi in the plane.
-- `dots_move_center`: Moves a set of dots to the center of the object.
-- `distance_between_points`: Calculates the distance between two points in any dimension.
-- `create_mesh_XYZ`: Creates a 3D mesh using np.meshgrid.
-- `create_mesh_XY_old`: Creates a 2D mesh using np.meshgrid with old parameters.
-- `create_mesh_XY`: Creates a 2D mesh using np.meshgrid with new parameters.
-- `interpolation_real`: Interpolates any real 2D matrix into a function.
-- `interpolation_complex`: Interpolates a complex 2D array of any data into a function.
-- `integral_of_function_1D`: Integrates a function over a 1D range, handling complex values.
-- `arrays_from_mesh`: Returns the tuple of x1Array, x2Array, etc., from a mesh.
-- `reading_file_mat`: Reads a .mat file and converts one of its fields into a numpy array.
-- `dots3D_rescale`: Rescales dots from indices to physical coordinates based on a mesh.
-- `random_list`: Modifies values by adding a random component within a specified range.
-- `propagator_split_step_3D`: Propagates a field in 3D using the split-step Fourier method.
-- `propagator_split_step_3D_linear`: Linearly propagates a field in 3D using the split-step Fourier method.
-- `one_plane_propagator`: Propagates a field from a single plane both forward and backward in z.
-- `cut_filter`: Applies a circular or rectangular filter to a field.
+Module Descriptions
 
-### plotings.py
+1. all_knots_functions
 
-This module includes various functions for plotting and visualizing data in 2D and 3D, as well as functions for creating interactive plots using Plotly.
+This module calculates and visualizes knot fields using braid functions and LG modes.
 
-**Functions:**
-- `plot_2D`: Plots a 2D field using Matplotlib.
-- `plot_scatter_2D`: Creates a 2D scatter plot using Matplotlib.
-- `plot_plane_go`: Plots a cross-section XY plane in 3D using Plotly.
-- `plot_3D_dots_go`: Plots 3D dots interactively in the browser using Plotly.
-- `plot_3D_density`: Plots 3D density in the browser using Plotly.
-- `plot_scatter_3D`: Plots 3D scatter points using Matplotlib.
-- `box_set_go`: Sets up a 3D plot with box boundaries using Plotly.
-- `plotDots`: Plots an array of dots interactively in the browser using Plotly.
+Functions:
 
-### singularities.py
+general_braid_function(): Computes general braid fields.
 
-This module includes classes of different singularities and functions for processing singularities in optical fields.
+trefoil_standard(), hopf_standard(), borromean(): Predefined knot configurations.
 
-**Functions:**
-- `plot_knot_dots`: Plots 3D or 2D scatters from the field or dictionary with dots.
-- `plane_singularities_finder_9dots`: Helper function to find singularities in a 2D plane using 9 dots.
-- `plane_singularities_finder_4dots`: Helper function to find singularities in a 2D plane using 4 dots.
-- `fill_dict_as_matrix_helper`: Helper function to fill a dictionary as a matrix.
-- `cut_non_oam`: Finds singularities and returns a 3D array with values and non-values.
-- `get_singularities`: Simplifies cut_non_oam by returning an array of singularities.
-- `W_energy`: Calculates the total power in the Oxy plane.
-- `Jz_calc_no_conj`: Calculates the z-component of the angular momentum without conjugation.
-- `integral_number2_OAMcoefficients_FengLiPaper`: Calculates the weight of OAM at a radius using FengLi paper's method.
-- `integral_number3_OAMpower_FengLiPaper`: Calculates the total power in the OAM with a specific charge.
-- `knot_build_pyknotid`: Builds a normalized pyknotid knot.
-- `fill_dotsKnotList_mine`: Fills a list of dots by removing charge sign and arranging them into a list.
-- `dots_dens_reduction`: Reduces the density of singularity lines by removing extra dots.
+field_combination_LG(): Combines different LG modes.
 
-## Installation
+2. beams_and_pulses
 
-To install the package, simply clone this repository and include the modules in your Python path.
+This module provides functions to generate and manipulate different optical beam shapes.
 
-```bash
-git clone <repository_url>
-Usage
-You can import the modules and use the functions as needed. For example:
+Functions:
 
-python
-Copy code
-from beams_and_pulses import LG_simple
-import numpy as np
+LG_simple(): Creates classic Laguerre-Gaussian beams.
 
-# Define spatial coordinates
-x = np.linspace(-10, 10, 100)
-y = np.linspace(-10, 10, 100)
-X, Y = np.meshgrid(x, y)
+trefoil(), hopf(): Generates fields based on knot configurations.
 
-# Generate an LG beam
-beam = LG_simple(X, Y, l=1, p=0, width=1, k0=1)
+milnor_Pol_u_v_any(): Constructs Milnor polynomials.
 
-# Plot the beam
-import plotings
-plotings.plot_2D(np.abs(beam)**2, x, y, title='LG Beam')
+3. center_beam_search
+
+Processes laser beam fields by finding beam centers and removing tilts.
+
+Functions:
+
+find_beam_waist(): Estimates beam waist.
+
+center_beam_finding(): Finds the center of the beam.
+
+remove_tilt(): Removes beam tilt for accurate analysis.
+
+4. data_generation_old
+
+Handles field processing from .mat files, normalization, interpolation, and center finding.
+
+Functions:
+
+read_field_2D_single(): Reads a 2D array from MATLAB files.
+
+field_interpolation(): Rescales fields for higher accuracy.
+
+one_plane_propagator(): Simulates double-sided propagation of optical fields.
+
+5. dots_processing
+
+Processes singularity dots in 3D optical fields by filtering, clustering, and reducing noise.
+
+Functions:
+
+filter_PlaneTwoClusters(): Identifies and removes small clusters.
+
+globalFilterDots(): Applies multiple filters for noise reduction.
+
+filtered_dots(): Outputs processed singularity dots.
+
+6. functions_general
+
+Provides general mathematical and utility functions for numerical simulations.
+
+Functions:
+
+create_mesh_XYZ(): Generates 3D mesh grids.
+
+interpolation_complex(): Interpolates complex fields.
+
+propagator_split_step_3D(): Simulates optical field propagation.
+
+7. functions_turbulence
+
+Simulates optical turbulence and its effects on laser beams.
+
+Functions:
+
+r0_from_Cn2(): Computes Fried parameter from turbulence data.
+
+propagation_ps(): Propagates beams through multiple phase screens.
+
+find_center_of_intensity(): Determines the intensity center in 2D fields.
+
+8. plotings
+
+Handles visualization of optical fields and singularities in 2D and 3D.
+
+Functions:
+
+plot_2D(): Plots 2D fields.
+
+plot_3D_dots_go(): Interactive 3D singularity dot visualization.
+
+plot_scatter_3D(): Creates scatter plots in 3D.
+
+9. singularities
+
+Detects and processes singularities in optical fields, including knots and OAM spectra.
+
+Functions:
+
+plane_singularities_finder_9dots(): Finds singularities in 2D slices.
+
+get_singularities(): Extracts and simplifies singularity structures.
+
+knot_build_pyknotid(): Constructs pyknotid knots.
+
+
+
+
+Installation
+
+Ensure you have the following dependencies installed:
+pip install numpy scipy matplotlib plotly aotools
+
+License
+
+This package is developed for research purposes. Contact the author for licensing details.
+
+Author
+
+Dmitrii Tsvetkov
