@@ -59,7 +59,7 @@ def crop_field_3d(field_3d, crop_percentage):
     return cropped_field, end_x - start_x, end_y - start_y
 
 
-def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0, screens_nums, knot_length, epochs=1,
+def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0, screens_nums, epochs=1,
                    plot=False):
     """
     Calculate the Strehl Ratio (SR) and turbulence parameters using the Gaussian Fourier method.
@@ -147,15 +147,15 @@ def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0, screens_
 # =============================================================================
 # Simulation Parameter Definitions
 # =============================================================================
-L_prop_values = [270]
-knot_length = 100
-width0_values = [6e-3 / np.sqrt(2)]
-xy_lim_2D_values = [(-45.0e-3, 45.0e-3)]
-res_xy_2D_values = [301]
-Rytov_values = [0.15]  # Example values for different simulation cases
-l0_values = [3e-3]
-L0_values = [10]
-screens_numss = [1]
+L_prop_values = [270]  # array of propagation lengths
+width0_values = [6e-3 / np.sqrt(2)]  # beam width
+xy_lim_2D_values = [(-45.0e-3, 45.0e-3)]  # window size
+res_xy_2D_values = [301]  # XY resolution
+Rytov_values = [0.05, 0.15, 0.25]  # Example turbulence cases
+l0_values = [3e-3]  # inner scale of turbulence
+L0_values = [10]  # outer scale of turbulence
+screens_numss = [1]  # amount of phase screens. everything is automated, just change the number
+
 # amount of epochs should be high (>500 at least)
 simulation_epochs = 5  # Set the number of epochs (adjust as needed)
 enable_plotting = True  # Set to True to enable plotting, False to disable
@@ -202,7 +202,6 @@ for params in parameter_sets:
         currents, currents_SR = run_simulation(
             *params,
             screens_nums=screens_nums,
-            knot_length=knot_length,
             epochs=simulation_epochs,
             plot=enable_plotting
         )
