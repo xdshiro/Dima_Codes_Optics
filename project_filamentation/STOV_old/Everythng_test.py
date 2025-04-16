@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.special import erf, jv, iv, assoc_laguerre
+from scipy.fft import fftn, ifftn, fftshift, ifftshift
+import matplotlib.pyplot as plt
 
 # =============================================================================
 # Module Selection Flags
@@ -7,7 +9,6 @@ from scipy.special import erf, jv, iv, assoc_laguerre
 # These flags determine which modules or features of the simulation are active.
 module_checking_spectrum = 0  # Flag for checking spectral properties
 module_hobbit = 0  # Flag for enabling the "Hobbit" module
-module_sum = 1  # Flag for summing fields
 mod_4pulses = 1  # Flag for using four pulses
 module_adi = 0  # Flag for using the ADI propagation method
 module_paraxial = 1  # Flag for using paraxial approximation
@@ -129,14 +130,14 @@ def betta_func(K_val):
         The beta parameter corresponding to the given photon order.
     """
     beta_values = [
-        0,
+        0,  # Placeholder value
         0 * 2e-0,  # Placeholder value
-        2,
-        3,
+        2,   # Placeholder value
+        3,  # Placeholder value
         2.4e-37 * (1e-2) ** (2 * K_val - 3),
-        5,
-        6,
-        7,
+        5,  # Placeholder value
+        6,  # Placeholder value
+        7,  # Placeholder value
         3.79347046850176e-121
     ]
     return beta_values[K_val]
@@ -166,8 +167,6 @@ w_D = 2 * n0 / (k2_dis * c_sol)  # Derived dispersion parameter
 chi3_2 = 8 * n0 * n2 / 3
 eps_nl = 3 * chi3_2 / 4
 
-# Intensity mode: 1 = intensity, 2 = field amplitude (if needed)
-Int_mode = module_intensity + 1
 
 # Normalized maximum field amplitude (dimensionless scaling)
 Imax = 1
@@ -294,41 +293,6 @@ def u_far_hob2(x, y, t, m, k):
     return temp_sum * spatial_envelope * temporal_envelope
 
 
-# -----------------------------------------------------------------------------
-# Field Functions
-# -----------------------------------------------------------------------------
-def sum_fields(x, y, t):
-    """
-    Sum fields (Hobbit-type) at a given (x, y, t).
-
-    Global parameters used:
-      Imax, x1, y1, t1, x2, y2, t2,
-      lOAMSUM1, lOAMSUM2, phase, MOD_4pulses, k
-    """
-    field = Imax * (
-            u_far_hob2(x - x1, y - y1, t - t1, l_oam_sum1, k) +
-            u_far_hob2(x - x2, y - y2, t - t2, l_oam_sum2, k) * np.exp(1j * phase)
-    )
-    if mod_4pulses:
-        field += Imax * u_far_hob2(x - x2, y - y2, t - t2, -l_oam_sum2, k)
-    return field
-
-
-def field_simple_oam(x, y, t):
-    """
-    Compute a simple Optical Angular Momentum (OAM) field with a Gaussian envelope.
-
-    Global parameters used:
-      Imax, radius, x0, y0, rho0, k0, f, t0, tp, lOAM
-
-    Note: Verify that the second call to radius uses the correct y-offset.
-    """
-    r = radius(x - x0, y - y0)
-    envelope = np.exp(- r ** 2 / rho0 ** 2 - 1j * k0 * r ** 2 / (2 * f) - ((t - t0) / tp) ** 2)
-    oam_term = ((x - x0) / rho0 + 1j * np.sign(l_oam) * (y - y0) / rho0) ** abs(l_oam)
-    return Imax * envelope * oam_term
-
-
 def field_stov_1(x, y, t):
     """
     Compute a STOV (Spatio-Temporal Optical Vortex) field (method 1).
@@ -451,6 +415,405 @@ def phi(x, y_or_t):
     Note: The second parameter can represent either a spatial or temporal coordinate.
     """
     return np.angle(x + 1j * y_or_t)
+
+
+def split_step_time(shape: callable, loopInnerM: int = 1, loopOuterKmax: int = 1) -> np.ndarray:
+    """
+    Perform a split-step simulation for wave propagation in a plasma medium.
+
+    This function evolves an electric field E along the propagation axis (z) using
+    the split-step method. At each step, a linear propagation part is computed in the
+    Fourier domain while a nonlinear phase modulation is applied in real space to account
+    for Kerr nonlinearity and plasma effects.
+
+    Parameters:
+        shape (callable): A function to generate the initial electric field E, taking three
+                          arguments corresponding to the spatial and temporal mesh grids
+                          (xytMesh[0], xytMesh[1], xytMesh[2]).
+        loopInnerM (int, optional): Number of inner iterations for each outer propagation step.
+        loopOuterKmax (int, optional): Number of outer propagation steps.
+
+    Returns:
+        np.ndarray: The electric field E after propagation.
+
+    Notes:
+        This function expects various global variables to be defined:
+            - zArray: A 1D array of z positions; used to compute propagation step dz.
+            - tArray: A 1D array of time values; used to compute the time step dt.
+            - xytMesh: A tuple containing meshgrids for the spatial (x, y) and temporal (t) domains.
+            - xResolution, yResolution, tResolution: Resolutions for the (x, y, t) grid.
+            - sigma_K8, K, rho_at, sigma, Ui, a, w0, n2, eps0, epsNL, tau_c: Physical parameters.
+            - KxywMesh: A tuple or array containing spectral mesh grids for (kx, ky, ω).
+            - k0, n0, cSOL, k2Dis: Propagation constants.
+            - Betta_func: A function that returns the beta parameter based on K.
+    """
+
+    # Helper: Compute intensity (squared amplitude) of the electric field.
+    def compute_intensity(E: np.ndarray) -> np.ndarray:
+        """Return the intensity computed as the squared magnitude of E."""
+        return np.abs(E) ** 2
+
+    # Determine propagation step size along z from the global zArray.
+    dz = z_array[1] - z_array[0]
+
+    # Helper: Compute the plasma density evolution using a nonlinear model.
+    def compute_plasma_density_nonlinear(E: np.ndarray) -> np.ndarray:
+        """
+        Compute the plasma density evolution over time using an explicit time-stepping scheme.
+
+        This scheme updates the plasma density at each time slice based on the ionization rate
+        and avalanche effect. It uses an exponential decay factor computed from the averaged
+        ionization rates.
+
+        Parameters:
+            E (np.ndarray): Electric field distribution of shape (xResolution, yResolution, tResolution).
+
+        Returns:
+            np.ndarray: Plasma density distribution over the grid.
+        """
+        plasma_density = np.zeros((x_resolution, y_resolution, t_resolution))
+        dt = t_array[1] - t_array[0]  # time step
+
+        # Helper functions for ionization and avalanche rates:
+        def Wofi(I: np.ndarray) -> np.ndarray:
+            """Multiphoton ionization rate."""
+            return sigma_K8 * I ** K
+
+        def Wava(I: np.ndarray) -> np.ndarray:
+            """Avalanche ionization rate."""
+            return sigma * I / Ui
+
+        def Q_pd(I: np.ndarray) -> np.ndarray:
+            """Photoionization source term."""
+            return Wofi(I)
+
+        def a_pd(I1: np.ndarray, I2: np.ndarray) -> np.ndarray:
+            """
+            Compute the exponential decay factor over the time interval using average ionization rates.
+
+            The decay factor is given by the exponential of the negative average rate.
+            """
+            avg_rate = (Wofi(I1) - Wava(I1) + Wofi(I2) - Wava(I2)) * dt / 2
+            return np.exp(-avg_rate)
+
+        etta_pd = dt * rho_at / 2
+
+        # Time-stepping: update plasma density for each time slice.
+        for i in range(t_resolution - 1):
+            intensity_current = compute_intensity(E[:, :, i])
+            intensity_next = compute_intensity(E[:, :, i + 1])
+            plasma_density[:, :, i + 1] = (
+                    a_pd(intensity_current, intensity_next) *
+                    (plasma_density[:, :, i] + etta_pd * Q_pd(intensity_current))
+                    + etta_pd * Q_pd(intensity_next)
+            )
+        return plasma_density
+
+    # Helper: Compute the nonlinear phase shift (spectral nonlinearity) to be applied.
+    def compute_nonlinearity_spec(E: np.ndarray, plasma_density: np.ndarray) -> np.ndarray:
+        """
+        Compute the nonlinear phase change caused by Kerr effect and plasma induced effects.
+
+        The nonlinearity includes contributions from the Kerr response, plasma defocusing (via
+        a beta term), and absorption/loss terms. The returned value is scaled by the step size dz.
+
+        Parameters:
+            E (np.ndarray): The current electric field distribution.
+            plasma_density (np.ndarray): Plasma density corresponding to the current field.
+
+        Returns:
+            np.ndarray: The computed nonlinear phase shift.
+        """
+        intensity_val = compute_intensity(E)
+        term1 = (1j / (2 * eps0)) * ((w0 + kxyw_mesh[2]) / (c_sol * n0)) * eps_nl * intensity_val
+        term2 = -betta_func(K) / 2 * intensity_val ** (K - 1) * (1 - plasma_density / rho_at)
+        term3 = -sigma / 2 * (1 + 1j * w0 * tau_c) * plasma_density
+        return dz * (term1 + term2 + term3)
+
+    # Helper: Linear propagation step using FFT-based spectral methods.
+    def linear_step(field: np.ndarray) -> np.ndarray:
+        """
+        Propagate the electric field in the spectral domain by applying the appropriate phase shift.
+
+        This function uses FFT to transform the field to the spectral domain, applies phase shifts
+        corresponding to diffraction and dispersion, and then returns to the spatial domain.
+
+        Parameters:
+            field (np.ndarray): Input electric field distribution.
+
+        Returns:
+            np.ndarray: Electric field after the linear propagation step.
+        """
+        temporary_field = fftshift(fftn(field))
+        # Construct the phase factor for diffraction and dispersion.
+        phase_factor = (np.exp(-1j * dz / (2 * k0 * n0) * kxyw_mesh[0] ** 2) *
+                        np.exp(-1j * dz / (2 * k0 * n0) * kxyw_mesh[1] ** 2) *
+                        np.exp(1j * dz * k2_dis / 2 * kxyw_mesh[2] ** 2))
+        temporary_field *= phase_factor
+        return ifftn(ifftshift(temporary_field))
+
+    # Initialize the electric field using the provided shape function and mesh.
+    E = shape(xyt_mesh[0], xyt_mesh[1], xyt_mesh[2])
+    center_val = E[int(x_resolution / 2), int(y_resolution / 2), int(t_resolution / 2)]
+    print("Initial center field value:", center_val)
+
+    # Main propagation loop: Outer and inner loop to perform split-step integration.
+    for k in range(loopOuterKmax):
+        for m in range(1, loopInnerM):
+            # Compute plasma density evolution (nonlinear model) for current electric field.
+            plasma_density = compute_plasma_density_nonlinear(E)
+            # Apply the linear step (using FFT propagation).
+            E = linear_step(E)
+            # Compute the nonlinear phase shift and update the field accordingly.
+            nonlin_phase = compute_nonlinearity_spec(E, plasma_density)
+            E = E * np.exp(nonlin_phase)
+
+    return E
+
+
+def split_step_time_Z(shape: callable, loopInnerM: int = 1, loopOuterKmax: int = 1) -> np.ndarray:
+    """
+    Perform a split-step simulation in z that evolves an electric field
+    along a propagation axis while accounting for nonlinear plasma and Kerr effects.
+
+    This function initializes the electric field using the provided mesh grids (from xytMesh)
+    and then propagates the field along z. At each z-step the simulation applies:
+        1. A linear propagation step in the spectral domain (to model diffraction and dispersion).
+        2. A nonlinear phase modulation due to the Kerr effect and plasma formation.
+
+    The field is recorded at a specific time slice (the center of the temporal grid) for every z step.
+
+    Parameters:
+        shape (callable): Function that returns the initial electric field given the spatial
+                          and temporal mesh grids (xytMesh[0], xytMesh[1], xytMesh[2]).
+        loopInnerM (int, optional): Number of inner propagation iterations per outer step.
+        loopOuterKmax (int, optional): Number of outer propagation steps.
+
+    Returns:
+        np.ndarray: A complex array (of shape (xResolution, yResolution, zResolution))
+                    holding the propagated field sampled at the central time slice.
+
+    Notes:
+        This routine relies on many global variables that must be defined prior to calling it,
+        including:
+
+          - zArray: 1D array of propagation distances.
+          - tArray: 1D array of temporal points.
+          - xytMesh: Tuple of mesh grids for the spatial (x, y) and temporal (t) domains.
+          - xResolution, yResolution, tResolution: Dimensions of the spatial and temporal grids.
+          - sigma_K8, K, rho_at, sigma, Ui, a, tFinish, module_CheckingSpectrum: Physical and simulation parameters.
+          - xArray, yArray, kxArray, kyArray, wArray: Arrays used for spectrum and spatial debugging plots.
+          - k0, n0, cSOL, k2Dis, eps0, epsNL, w0, tau_c: Propagation constants.
+          - KxywMesh: Tuple or array containing the spectral mesh grids.
+          - Betta_func: Function returning beta parameters as a function of K.
+          - zResolution: The number of z steps used for recording the propagated field.
+    """
+
+    # -------------------------------------------------------------------------
+    # Helper Functions
+    # -------------------------------------------------------------------------
+
+    def compute_intensity(E: np.ndarray) -> np.ndarray:
+        """
+        Compute the intensity as the squared magnitude of an electric field.
+
+        Parameters:
+            E (np.ndarray): Electric field.
+
+        Returns:
+            np.ndarray: Intensity, |E|².
+        """
+        return np.abs(E) ** 2
+
+    # Determine propagation step size from zArray.
+    dz = z_array[1] - z_array[0]
+
+    def compute_plasma_density(E: np.ndarray) -> np.ndarray:
+        """
+        Compute the plasma density evolution along the temporal grid based on the electric field E.
+
+        For a single time point (tResolution == 1), the density is computed directly.
+        For multiple time points, an explicit time–stepping approach is used where the density
+        is updated iteratively based on photoionization and avalanche processes.
+
+        Parameters:
+            E (np.ndarray): Electric field with shape (xResolution, yResolution, tResolution).
+
+        Returns:
+            np.ndarray: Plasma density array with the same (x, y, t) dimensions as E.
+        """
+        plasma_density = np.zeros((x_resolution, y_resolution, t_resolution))
+        dt = t_array[1] - t_array[0] if t_resolution > 1 else t_finish
+
+        if t_resolution == 1:
+            # For a single temporal point, a simplified estimation is used.
+            plasma_density[:, :, 0] = (t_finish *
+                                       (sigma_K8 * np.abs(E[:, :, 0]) ** (2 * K) * (rho_at)
+                                        + sigma / Ui * np.abs(E[:, :, 0]) ** 2 * plasma_density[:, :, 0]))
+            return plasma_density
+        else:
+            # For multiple time points, define helper functions for ionization rates.
+            def Wofi(I: np.ndarray) -> np.ndarray:
+                """Multiphoton ionization rate."""
+                return sigma_K8 * I ** K
+
+            def Wava(I: np.ndarray) -> np.ndarray:
+                """Avalanche ionization rate."""
+                return sigma * I / Ui
+
+            def Q_pd(I: np.ndarray) -> np.ndarray:
+                """Photoionization source term."""
+                return Wofi(I)
+
+            def a_pd(I1: np.ndarray, I2: np.ndarray) -> np.ndarray:
+                """
+                Compute the decay factor over a time step based on the average of the ionization rates.
+
+                Parameters:
+                    I1, I2 (np.ndarray): Intensities at consecutive time steps.
+
+                Returns:
+                    np.ndarray: Exponential decay factor.
+                """
+                avg_rate = ((Wofi(I1) - Wava(I1)) + (Wofi(I2) - Wava(I2))) * dt / 2
+                return np.exp(-avg_rate)
+
+            etta_pd = dt * rho_at / 2
+
+            # Iteratively update the plasma density for each time index.
+            for i in range(t_resolution - 1):
+                current_intensity = compute_intensity(E[:, :, i])
+                next_intensity = compute_intensity(E[:, :, i + 1])
+                plasma_density[:, :, i + 1] = (a_pd(current_intensity, next_intensity) *
+                                               (plasma_density[:, :, i] + etta_pd * Q_pd(current_intensity))
+                                               + etta_pd * Q_pd(next_intensity))
+            return plasma_density
+
+    def compute_nonlinearity_spec(E: np.ndarray, plasma_density: np.ndarray) -> np.ndarray:
+        """
+        Compute the nonlinear phase shift caused by Kerr effects and plasma dynamics.
+
+        The function combines contributions from:
+            - The Kerr effect.
+            - Plasma-induced defocusing (modulated by Betta_func).
+            - Plasma absorption.
+        The total phase shift is scaled by the propagation step dz.
+
+        Parameters:
+            E (np.ndarray): The current electric field distribution.
+            plasma_density (np.ndarray): Plasma density matching the dimensions of E.
+
+        Returns:
+            np.ndarray: The nonlinear phase shift to be applied to E.
+        """
+        intensity_val = compute_intensity(E)
+        term1 = (1j / (2 * eps0)) * ((w0 + kxyw_mesh[2]) / (c_sol * n0)) * eps_nl * intensity_val
+        term2 = -betta_func(K) / 2 * intensity_val ** (K - 1) * (1 - plasma_density / rho_at)
+        term3 = -sigma / 2 * (1 + 1j * w0 * tau_c) * plasma_density
+        return dz * (term1 + term2 + term3)
+
+    def linear_step(field: np.ndarray) -> np.ndarray:
+        """
+        Perform a linear propagation step by applying phase shifts in the Fourier domain.
+
+        This function transforms the electric field to its spectral domain, applies a phase
+        factor corresponding to diffraction and dispersion, and transforms back to the spatial domain.
+
+        Parameters:
+            field (np.ndarray): The input electric field.
+
+        Returns:
+            np.ndarray: Updated electric field after linear propagation.
+        """
+        temporary_field = fftshift(fftn(field))
+        phase_factor = (np.exp(-1j * dz / (2 * k0 * n0) * kxyw_mesh[0] ** 2) *
+                        np.exp(-1j * dz / (2 * k0 * n0) * kxyw_mesh[1] ** 2) *
+                        np.exp(1j * dz * k2_dis / 2 * kxyw_mesh[2] ** 2))
+        temporary_field *= phase_factor
+        return ifftn(ifftshift(temporary_field))
+
+    # -------------------------------------------------------------------------
+    # Main Propagation Routine
+    # -------------------------------------------------------------------------
+
+    # Initialize the electric field from the provided shape function and mesh.
+    E = shape(xyt_mesh[0], xyt_mesh[1], xyt_mesh[2])
+    center_val = E[int(x_resolution / 2), int(y_resolution / 2), int(t_resolution / 2)]
+    print("Initial center field value:", center_val)
+
+    # Allocate storage for the propagated field along z.
+    fieldReturn = np.zeros((x_resolution, y_resolution, z_resolution), dtype=complex)
+    time_index = int(t_resolution / 2)  # Record the central time slice.
+    fieldReturn[:, :, 0] = E[:, :, time_index]
+
+    # Main loop: propagate the field along z.
+    for k in range(loopOuterKmax):
+        # Optional: Display spatial and spectral profiles for debugging if enabled.
+        if module_checking_spectrum:
+            E_abs = np.abs(E)
+            plt.plot(x_array, E_abs[:, int(y_resolution / 2), time_index])
+            plt.title("Spatial Profile (x)")
+            plt.show()
+            plt.close()
+
+            plt.plot(y_array, E_abs[int(x_resolution / 2), :, time_index])
+            plt.title("Spatial Profile (y)")
+            plt.show()
+            plt.close()
+
+            plt.plot(t_array, E_abs[int(x_resolution / 2), int(y_resolution / 2), :])
+            plt.title("Temporal Profile")
+            plt.show()
+            plt.close()
+
+            E_spectrum = np.abs(fftshift(fftn(E)))
+            plt.plot(kx_array, E_spectrum[:, int(y_resolution / 2), time_index])
+            plt.title("Spectral Profile (kx)")
+            plt.show()
+            plt.close()
+
+            plt.plot(ky_array, E_spectrum[int(x_resolution / 2), :, time_index])
+            plt.title("Spectral Profile (ky)")
+            plt.show()
+            plt.close()
+
+            plt.plot(w_array, E_spectrum[int(x_resolution / 2), int(y_resolution / 2), :])
+            plt.title("Spectral Profile (ω)")
+            plt.show()
+            plt.close()
+
+        for m in range(1, loopInnerM):
+            # Calculate the current z-index for storage.
+            z_index = k * loopInnerM + m
+            # Update plasma density based on the current electric field.
+            plasma_density = compute_plasma_density(E)
+            # Perform a linear propagation step.
+            E = linear_step(E)
+            # Compute the nonlinear phase shift and update the field.
+            nonlin_phase = compute_nonlinearity_spec(E, plasma_density)
+            E = E * np.exp(nonlin_phase)
+            # Record the field at the central time slice.
+            fieldReturn[:, :, z_index] = E[:, :, time_index]
+
+        # Optional: Check the spectrum after each outer loop iteration.
+        if module_checking_spectrum:
+            E_spectrum = np.abs(fftshift(fftn(E)))
+            plt.plot(kx_array, E_spectrum[:, int(y_resolution / 2), time_index])
+            plt.title("Spectrum after propagation (kx)")
+            plt.show()
+            plt.close()
+
+            plt.plot(ky_array, E_spectrum[int(x_resolution / 2), :, time_index])
+            plt.title("Spectrum after propagation (ky)")
+            plt.show()
+            plt.close()
+
+            plt.plot(w_array, E_spectrum[int(x_resolution / 2), int(y_resolution / 2), :])
+            plt.title("Spectrum after propagation (ω)")
+            plt.show()
+            plt.close()
+
+    return fieldReturn
 
 
 def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):

@@ -149,9 +149,9 @@ def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0, screens_
 # =============================================================================
 L_prop_values = [270]  # array of propagation lengths
 width0_values = [6e-3 / np.sqrt(2)]  # beam width
-xy_lim_2D_values = [(-45.0e-3, 45.0e-3)]  # window size
-res_xy_2D_values = [301]  # XY resolution
-Rytov_values = [0.05, 0.15, 0.25]  # Example turbulence cases
+xy_lim_2D_values = [(-70.0e-3, 70.0e-3)]  # window size
+res_xy_2D_values = [256]  # XY resolution
+Rytov_values = [0.25]  # Example turbulence cases
 l0_values = [3e-3]  # inner scale of turbulence
 L0_values = [10]  # outer scale of turbulence
 screens_numss = [1]  # amount of phase screens. everything is automated, just change the number

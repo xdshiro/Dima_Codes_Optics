@@ -673,6 +673,7 @@ def split_step_old_time(shape, loopInnerM=1, loopOuterKmax=1):
         """for i in range(tResolution - 1):
             for j in range(xResolution):
                 for m in range(yResolution):
+                for m in range(yResolution):
                         if plasmaDensity[j, m, i] > rho_at:
                             plasmaDensity[j, m, i] = rho_at-1
             print((a * plasmaDensity[:, :, i] ** 2).max())
