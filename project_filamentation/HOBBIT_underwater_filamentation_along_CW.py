@@ -1,69 +1,92 @@
+"""
+A flexible, extensible simulation framework for propagating structured light fields—
+with built‑in support for “Hobbit” beam profiles and the ability to swap in
+other beam shapes (e.g., asymmetric Laguerre–Gaussian, STOV variants).
+
+Key features:
+  • Propagation solvers:
+      – split_step_time / split_step_time_Z  : Split‑step Fourier methods (time‑ or z‑domain)
+      – adi_2d1_nonlinear / adi_2d1_nonlinear_z : 2D space + time ADI scheme
+      – UPPE_time                         : Unidirectional Pulse Propagation Equation in time domain
+  • Preconfigured beam generators:
+      – hobbit (u_far_hob2 + helpers)     : “Hobbit” field profile
+      – asymmetric_lg                     : Asymmetric Laguerre–Gaussian beams
+      – field_stov_1, field_stov_simple  : Spatio‑temporal optical vortex (STOV) variants
+  • Centralized physical & simulation parameters:
+      – Spatial/temporal grids and resolutions
+      – Beam/pulse settings (radius, wavelength, OAM order, chirp, power)
+      – Linear medium properties (dispersion, refractive index)
+      – Nonlinear constants (Kerr n₂, χ⁽³⁾, multiphoton cross‑sections, plasma rates)
+      – Derived quantities (k₀, Rayleigh length, critical power, collapse length)
+  • Diagnostics & visualization:
+      – plot_1D: 1D line cuts
+      – plot_2D: 2D intensity maps
+      – plot_3D: 3D isosurfaces via Plotly
+      – Real‑time spectral plots when module_checking_spectrum is enabled
+  • Example “__main__” workflow:
+      1. Select or customize a beam generator (e.g., hobbit)
+      2. Normalize to target power Pmax
+      3. Propagate using a chosen solver
+      4. Visualize results in physical or spectral domains
+
+Usage:
+  1. Edit top‑of‑file flags (module_checking_spectrum, module_intensity) and core
+     parameters to match your scenario.
+  2. Import or define your beam function (hobbit, asymmetric_lg, etc.).
+  3. Call one of the high‑level propagation functions with your beam generator:
+       E_final = split_step_time_Z(hobbit, loop_inner_M, loop_outer_K)
+  4. Use the plotting utilities to inspect spatial, temporal, or spectral evolution.
+"""
+
+from typing import Any
+
 import numpy as np
+from numpy import ndarray, dtype, floating
+from numpy._typing import _64Bit
 from scipy.special import erf, jv, iv, assoc_laguerre
 from scipy.fft import fftn, ifftn, fftshift, ifftshift
 import matplotlib.pyplot as plt
+from scipy.integrate import ode
+import plotly.graph_objects as go
 
 # =============================================================================
 # Module Selection Flags
 # =============================================================================
+# book Couairon
 # These flags determine which modules or features of the simulation are active.
-module_checking_spectrum = 0  # Flag for checking spectral properties
-module_hobbit = 0  # Flag for enabling the "Hobbit" module
-mod_4pulses = 1  # Flag for using four pulses
-module_adi = 0  # Flag for using the ADI propagation method
-module_paraxial = 1  # Flag for using paraxial approximation
-module_nonrapaxial = 0  # Flag for non-paraxial propagation (if applicable)
-module_phase = 0  # Flag for phase-related processing
-module_initial = 0  # Flag for initial field setup
-module_intensity = 1  # Flag to use intensity (1) or field absolute value (0)
-module_3d = 0  # Flag for 3D simulations
-save_results = 0  # Flag for saving simulation outputs
-save_name = 'SUMm-1B_4Hp1e5_y100_phph1_-3'  # Base filename for saved outputs
+module_checking_spectrum = 1  # Flag for checking spectral properties
+module_intensity = 0  # Flag to use intensity (1) or field absolute value (0)
 
 # =============================================================================
 # Spatial and Temporal Resolutions
 # =============================================================================
 # Grid resolutions and physical domain limits.
-x_resolution = 171  # Number of grid points in the x-direction
-y_resolution = 171  # Number of grid points in the y-direction
-t_resolution = 1  # Number of grid points in time (2D version of the code)
-loop_inner_resolution = 501  # Inner loop resolution factor (M)
+x_resolution = 131  # Number of grid points in the x-direction
+y_resolution = 131  # Number of grid points in the y-direction
+t_resolution = 1  # Number of grid points in time (2D version of the code) 1 for CW
+loop_inner_resolution = 101  # Inner loop resolution factor (M)
 loop_outer_resolution = 1  # Outer loop resolution factor (Kmax)
 z_resolution = loop_inner_resolution * loop_outer_resolution  # Total z-resolution
 
 # Spatial domain boundaries (in meters)
 x_start, x_finish = 0, 700e-6  # x-range (0 to 700 μm)
 y_start, y_finish = 0, 700e-6  # y-range (0 to 700 μm)
-z_start, z_finish = 1e-3, 0.08  # z-range (1 mm to 80 mm)
+z_start, z_finish = 0, 0.1  # z-range (1 mm to 80 mm)
 
-# Temporal domain boundaries (in seconds)
-t_start, t_finish = 0, 1000e-13  # t-range (0 to 1000e-13 s)
-
-# Offsets for field positioning (in meters and seconds)
-x1, x2 = 0 * 50e-6, 0 * -50e-6  # x-offsets for different fields (currently zero)
-y1, y2 = 100e-6, -100e-6  # y-offsets for different fields
-t1, t2 = 0 * 100e-15, 0 * -100e-15  # t-offsets for different fields (currently zero)
-
+# Temporal domain boundaries (in seconds) for the split_step_time (over time)
+# DOES NOT MATTER for CW version
+t_start, t_finish = 0, 10e-13  # t-range (0 to 1000e-13 s)
 # A derived time index (typically used to index the middle of the temporal grid)
 time_index = int(t_resolution / 2)
 
-# =============================================================================
-# Temporary/Plasma Parameters
-# =============================================================================
-# These parameters are related to the plasma and nonlinear interactions.
-sigma_K8 = 2.4e-42 * (1e-2) ** (2 * 4)  # Effective cross section factor for multiphoton processes
-sigma = 4e-18 * (1e-2) ** 2  # Secondary cross section value
-rho_at = 7e22 * (1e-2) ** (-3)  # Atomic density (in m^-3)
-a = 0  # Additional parameter (e.g., recombination coefficient)
-tau_c = 3e-15  # Characteristic collision time (in seconds)
 
 # =============================================================================
 # Pulse Parameters
 # =============================================================================
-rho0 = 200e-6  # Beam radius or focal spot size (in meters)
-tp = 200e-12  # Pulse duration (in seconds)
+rho0 = 700e-6  # Beam radius for LG (in meters)
 lambda0 = 0.517e-6  # Central wavelength of the pulse (in meters)
-Pmax = 13.5e6  # Maximum power of the pulse (e.g., in Watts)
+Pmax = 1e-5  # Beam power of the pulse (e.g., in Watts)
+
 
 # =============================================================================
 # "Hobbit" Module Parameters
@@ -71,23 +94,15 @@ Pmax = 13.5e6  # Maximum power of the pulse (e.g., in Watts)
 # Parameters for the "Hobbit" field generation.
 beta_hob = 1.08  # Scaling parameter for the Hobbit phase factor
 alpha_hob = 0  # Additional phase offset for the Hobbit field
-ro_0_hob = 650e-6  # Characteristic radius for the Hobbit field (in meters)
-k = 3  # Mode index or photon number used in Hobbit functions
+ro_0_hob = 650e-6  # Characteristic parameter for the Hobbit field (in meters)
+k = 3  # Mode index used in Hobbit functions
 F_hob = 150e-3  # Focal length or related parameter for Hobbit (in meters)
 w_ring_hob = 244e-6  # Ring width parameter for the Hobbit field (in meters)
 w_G_hob = lambda0 * F_hob / (np.pi * w_ring_hob)  # Derived Gaussian width for Hobbit
-tau_0 = 242e-4  # Temporal parameter for the Hobbit field
+tau_0 = 1e100  # Temporal parameter for the Hobbit field CW
 
-# =============================================================================
-# STOV (Spatio-Temporal Optical Vortex) Parameters
-# =============================================================================
-y_radius = 800e-6  # Transverse radius for the STOV field in y (in meters)
-x_stov_radius = rho0  # Transverse radius for the STOV field in x (set equal to rho0)
-t_stov_radius = tp  # Temporal width for the STOV field (in seconds)
+
 l_oam = 0  # Orbital angular momentum (OAM) order for the field
-phase = np.pi * 1  # Global phase shift (in radians)
-l_oam_sum1 = 1  # OAM order for the first summed field component
-l_oam_sum2 = -1  # OAM order for the second summed field component
 
 # Center coordinates for the beam (usually at the center of the domain)
 x0 = (x_finish - x_start) / 2  # x-center of the beam (in meters)
@@ -103,6 +118,16 @@ k2_dis = 5.6e-28 / 1e-2  # Group Velocity Dispersion (GVD) coefficient (in ps^2/
 # Alternative option for non-diffraction with OAM:
 # k2_dis = -9.443607756116762e-22
 n0 = 1.332  # Linear refractive index of the medium
+
+# =============================================================================
+# Temporary/Plasma Parameters
+# =============================================================================
+# These parameters are related to the plasma and nonlinear interactions.
+sigma_K8 = 2.4e-42 * (1e-2) ** (2 * 4)  # Effective cross section factor for multiphoton processes
+sigma = 4e-18 * (1e-2) ** 2  # Secondary cross section value
+rho_at = 7e22 * (1e-2) ** (-3)  # Atomic density (in m^-3)
+a = 0  # Additional parameter (e.g., recombination coefficient)
+tau_c = 3e-15  # Characteristic collision time (in seconds)
 
 # =============================================================================
 # Nonlinear and Temporal Parameters
@@ -132,7 +157,7 @@ def betta_func(K_val):
     beta_values = [
         0,  # Placeholder value
         0 * 2e-0,  # Placeholder value
-        2,   # Placeholder value
+        2,  # Placeholder value
         3,  # Placeholder value
         2.4e-37 * (1e-2) ** (2 * K_val - 3),
         5,  # Placeholder value
@@ -166,7 +191,6 @@ w_D = 2 * n0 / (k2_dis * c_sol)  # Derived dispersion parameter
 # Calculate third-order nonlinear susceptibility parameters
 chi3_2 = 8 * n0 * n2 / 3
 eps_nl = 3 * chi3_2 / 4
-
 
 # Normalized maximum field amplitude (dimensionless scaling)
 Imax = 1
@@ -238,6 +262,8 @@ xyt_mesh = np.array(np.meshgrid(x_array, y_array, t_array, indexing='ij'))
 
 # Mesh for (kx, ky, w) used in spectral computations
 kxyw_mesh = np.array(np.meshgrid(kx_array, ky_array, w_array, indexing='ij'))
+
+
 # -----------------------------------------------------------------------------
 # Helper Functions for "Hobbit" Fields
 # -----------------------------------------------------------------------------
@@ -293,23 +319,6 @@ def u_far_hob2(x, y, t, m, k):
     return temp_sum * spatial_envelope * temporal_envelope
 
 
-def field_stov_1(x, y, t):
-    """
-    Compute a STOV (Spatio-Temporal Optical Vortex) field (method 1).
-
-    Global parameters used:
-      lOAM, phi, x0, t0, y0, yRadius, radius
-    """
-
-    def H1(r):
-        return (np.pi ** 1.5 * r / 4 * np.exp(- (2 * np.pi * r) ** 2 / 8) *
-                (iv(0, (2 * np.pi * r) ** 2 / 8) - iv(1, (2 * np.pi * r) ** 2 / 8)))
-
-    phase_factor = np.exp(-1j * l_oam * phi(x - x0, t - t0))
-    spatial_factor = H1(radius(x - x0, t - t0))
-    y_modulation = np.exp(- (y - y0) ** 2 / y_radius ** 2)
-    return 2 * np.pi * (-1j) ** l_oam * phase_factor * spatial_factor * y_modulation
-
 
 def hobbit(x, y, t):
     """
@@ -319,11 +328,10 @@ def hobbit(x, y, t):
       l_oam, x0, y0, t0, Imax, k, (and those used in the helper functions)
     """
     m = l_oam
-    print(f"l_oam = {m}")
     return Imax * u_far_hob2(x, y, t, m, k)
 
 
-def asymmetric_lg(x, y, t):
+def asymmetric_lg(x, y):
     """
     Compute an asymmetric Laguerre-Gaussian (LG) field.
 
@@ -379,34 +387,10 @@ def asymmetric_lg(x, y, t):
                 1j * (abs(l) + 2 * p + 1) * ksi(z)))
     return Imax * E
 
-
-def field_stov_simple(x, y, t):
-    """
-    Compute a simple STOV field using spatio-temporal envelopes.
-
-    Global parameters used:
-      Imax, t0, t_stov_radius, l_oam, x0, x_stov_radius, rho0, tp, y0, y_radius, k0, f, radius
-    """
-
-    def y_dependence(y_val):
-        return np.exp(- (y_val / y_radius) ** 2)
-
-    def x_dependence(x_val):
-        return np.exp(- (x_val / rho0) ** 2)
-
-    def t_dependence(t_val):
-        return np.exp(- (t_val / tp) ** 2)
-
-    field_term = ((t - t0) / t_stov_radius + 1j * np.sign(l_oam) * (x - x0) / x_stov_radius) ** abs(l_oam)
-    # Note: Using radius(x - x0, y - y0) instead of (y - x0) to ensure proper coordinate offsets.
-    phase_term = np.exp(-1j * k0 * radius(x - x0, y - y0) ** 2 / (2 * f))
-    return Imax * field_term * y_dependence(y - y0) * x_dependence(x - x0) * t_dependence(t - t0) * phase_term
-
-
-
 def radius(x, y):
     """Compute the radial distance from the origin."""
-    return np.sqrt(x**2 + y**2)
+    return np.sqrt(x ** 2 + y ** 2)
+
 
 def phi(x, y_or_t):
     """
@@ -642,7 +626,7 @@ def split_step_time_Z(shape: callable, loopInnerM: int = 1, loopOuterKmax: int =
         Returns:
             np.ndarray: Plasma density array with the same (x, y, t) dimensions as E.
         """
-        plasma_density = np.zeros((x_resolution, y_resolution, t_resolution))
+        plasma_density: ndarray[Any, dtype[floating[_64Bit]]] = np.zeros((x_resolution, y_resolution, t_resolution))
         dt = t_array[1] - t_array[0] if t_resolution > 1 else t_finish
 
         if t_resolution == 1:
@@ -761,10 +745,6 @@ def split_step_time_Z(shape: callable, loopInnerM: int = 1, loopOuterKmax: int =
             plt.show()
             plt.close()
 
-            plt.plot(t_array, E_abs[int(x_resolution / 2), int(y_resolution / 2), :])
-            plt.title("Temporal Profile")
-            plt.show()
-            plt.close()
 
             E_spectrum = np.abs(fftshift(fftn(E)))
             plt.plot(kx_array, E_spectrum[:, int(y_resolution / 2), time_index])
@@ -777,10 +757,6 @@ def split_step_time_Z(shape: callable, loopInnerM: int = 1, loopOuterKmax: int =
             plt.show()
             plt.close()
 
-            plt.plot(w_array, E_spectrum[int(x_resolution / 2), int(y_resolution / 2), :])
-            plt.title("Spectral Profile (ω)")
-            plt.show()
-            plt.close()
 
         for m in range(1, loopInnerM):
             # Calculate the current z-index for storage.
@@ -808,10 +784,6 @@ def split_step_time_Z(shape: callable, loopInnerM: int = 1, loopOuterKmax: int =
             plt.show()
             plt.close()
 
-            plt.plot(w_array, E_spectrum[int(x_resolution / 2), int(y_resolution / 2), :])
-            plt.title("Spectrum after propagation (ω)")
-            plt.show()
-            plt.close()
 
     return fieldReturn
 
@@ -860,7 +832,7 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
     # -------------------------------
     # Spatial step parameter delta
     # -------------------------------
-    delta = (z_array[1] - z_array[0]) / (4 * n0 * k0 * (x_array[1] - x_array[0])**2)
+    delta = (z_array[1] - z_array[0]) / (4 * n0 * k0 * (x_array[1] - x_array[0]) ** 2)
 
     # -------------------------------
     # Construct L_plus matrix (spatial implicit step)
@@ -872,7 +844,7 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
     L_plus[0, :] = d_plus
     for i in range(1, x_resolution - 1):
         L_plus[i, i - 1] = 1j * delta * u_array[i]
-        L_plus[i, i]     = 1 - 2j * delta
+        L_plus[i, i] = 1 - 2j * delta
         L_plus[i, i + 1] = 1j * delta * v_array[i]
 
     # -------------------------------
@@ -886,13 +858,13 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
     L_minus[-1, -1] = 1
     for i in range(1, x_resolution - 1):
         L_minus[i, i - 1] = -1j * delta * u_array[i]
-        L_minus[i, i]     = 1 + 2j * delta
+        L_minus[i, i] = 1 + 2j * delta
         L_minus[i, i + 1] = -1j * delta * v_array[i]
 
     # -------------------------------
     # Dispersion (time) step parameter delta_D
     # -------------------------------
-    delta_D = - (z_array[1] - z_array[0]) * k2_dis / (4 * (t_array[1] - t_array[0])**2)
+    delta_D = - (z_array[1] - z_array[0]) * k2_dis / (4 * (t_array[1] - t_array[0]) ** 2)
 
     # -------------------------------
     # Construct L_plus_D matrix (temporal implicit step)
@@ -906,7 +878,7 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
     L_plus_D[0, :] = d_plus_D
     for i in range(1, t_resolution - 1):
         L_plus_D[i, i - 1] = 1j * delta_D
-        L_plus_D[i, i]     = 1 - 2j * delta_D
+        L_plus_D[i, i] = 1 - 2j * delta_D
         L_plus_D[i, i + 1] = 1j * delta_D
 
     # -------------------------------
@@ -920,33 +892,20 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
     L_minus_D[-1, -1] = 1
     for i in range(1, t_resolution - 1):
         L_minus_D[i, i - 1] = -1j * delta_D
-        L_minus_D[i, i]     = 1 + 2j * delta_D
+        L_minus_D[i, i] = 1 + 2j * delta_D
         L_minus_D[i, i + 1] = -1j * delta_D
 
     # Invert the L_minus matrices for the implicit update steps
     L_minus_D_inv = np.linalg.inv(L_minus_D)
-    L_minus_inv   = np.linalg.inv(L_minus)
+    L_minus_inv = np.linalg.inv(L_minus)
 
     # -------------------------------
     # Local helper functions for intensity and plasma density
     # -------------------------------
     def intensity(E):
         """Calculate the intensity |E|^2 of the field."""
-        return np.abs(E)**2
+        return np.abs(E) ** 2
 
-    def plasma_density_initial(E):
-        """
-        Alternative plasma density calculation (not used in main loop).
-
-        Uses the field intensity at the mid-time index.
-        """
-        density = np.zeros((x_resolution, t_resolution))
-        for i in range(t_resolution):
-            density[:, i] = 2 * (
-                sigma_K8 * np.abs(E[:, t_resolution // 2])**(2 * K) *
-                np.sqrt(np.pi / (8 * K)) * rho_at * t_finish * 0.1
-            )
-        return density
 
     def plasma_density(E):
         """
@@ -957,7 +916,7 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
         density = np.zeros((x_resolution, t_resolution))
 
         def wofi(I_val):
-            return sigma_K8 * I_val**K
+            return sigma_K8 * I_val ** K
 
         def wava(I_val):
             return sigma * I_val / Ui
@@ -984,9 +943,9 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
         Accounts for Kerr nonlinearity and plasma-induced effects.
         """
         return E * (
-            (1j / (2 * eps0)) * (w0 / (c_sol * n0)) * eps0 * eps_nl * intensity(E)
-            - betta_func(K) / 2 * intensity(E)**(K - 1) * (1 - plasma_dens / rho_at)
-            - sigma / 2 * (1 + 1j * w0 * tau_c) * plasma_dens
+                (1j / (2 * eps0)) * (w0 / (c_sol * n0)) * eps0 * eps_nl * intensity(E)
+                - betta_func(K) / 2 * intensity(E) ** (K - 1) * (1 - plasma_dens / rho_at)
+                - sigma / 2 * (1 + 1j * w0 * tau_c) * plasma_dens
         )
 
     # -------------------------------
@@ -1002,7 +961,6 @@ def adi_2d1_nonlinear(E0, loop_inner_m, loop_outer_kmax):
         for inner in range(1, loop_inner_m):
             # Update the nonlinear term and plasma density
             Nn_current = (z_array[1] - z_array[0]) * nonlinearity(E, plasma_density(E))
-            plasma_dens = plasma_density(E)
 
             # Apply implicit time-step (dispersion) update
             E = np.dot(L_plus_D, E.T)
@@ -1226,3 +1184,303 @@ def adi_2d1_nonlinear_z(E0, loop_inner_m, loop_outer_kmax):
             field_return[:, outer * loop_inner_m + inner] = E[:, mid_time]
 
     return field_return
+
+
+##################
+
+# %% UPPE with time
+def UPPE_time(shape, loop_inner_m, loop_outer_kmax):
+    """
+    Solve the Unidirectional Pulse Propagation Equation (UPPE) in the time domain.
+
+    Uses your workspace globals:
+      - xyt_mesh, z_array, kxyw_mesh
+      - x_resolution, y_resolution, t_resolution
+      - eps0, eps_nl, w0, n0, c_sol, w_D
+      - module_checking_spectrum, legend_font_size
+    """
+
+    # -- Helpers -------------------------------------------------------------
+    def compute_intensity(E):
+        return np.abs(E) ** 2
+
+    def compute_nonlinearity(E):
+        # Kerr‐only nonlinear polarization
+        return eps0 * eps_nl * E * compute_intensity(E)
+
+    # -- Initialize field and spectrum -------------------------------------
+    E = shape(xyt_mesh[0], xyt_mesh[1], xyt_mesh[2])
+    espec = fftshift(fftn(E))
+    aspec = espec.copy()
+    dz = z_array[1] - z_array[0]
+
+    # -- Build spectral kz -----------------------------------------------
+    n_spec_3d = n0 * (1.0 + (w0 + kxyw_mesh[2]) / w_D)
+    k_spec_3d = n_spec_3d * (w0 + kxyw_mesh[2]) / c_sol
+    kz_3d = np.sqrt(k_spec_3d ** 2 - kxyw_mesh[0] ** 2 - kxyw_mesh[1] ** 2)
+
+    # -- Phase velocity ---------------------------------------------------
+    v_phase = c_sol / (n0 + 2 * n0 * w0 / w_D)
+
+    # -- ODE for spectral evolution --------------------------------------
+    def odes(z, A_flat):
+        # apply forward phase
+        A_flat = A_flat * np.exp(1j * z * (kz_3d - (w0 + w1d) / v_phase))
+        A3 = np.reshape(A_flat, (x_resolution, y_resolution, t_resolution))
+        E_space = ifftn(ifftshift(A3))
+        P = compute_nonlinearity(E_space)
+        P_spec = fftshift(fftn(P))
+        P_flat = np.reshape(P_spec, -1)
+        # apply backward phase and scaling
+        P_flat *= np.exp(-1j * z * (kz_3d - (w0 + w1d) / v_phase))
+        P_flat *= (1j / (2 * eps0)) * ((w0 + w1d) ** 2 / (c_sol ** 2 * kz_3d))
+        return P_flat
+
+    # -- Flatten spectral arrays for the integrator ------------------------
+    N = x_resolution * y_resolution * t_resolution
+    aspec = np.reshape(aspec, N)
+    w1d = np.reshape(kxyw_mesh[2], N)
+    kx1d = np.reshape(kxyw_mesh[0], N)
+    ky1d = np.reshape(kxyw_mesh[1], N)
+
+    # rebuild kz in 1D
+    n_spec_1d = n0 * (1.0 + (w0 + w1d) / w_D)
+    k_spec_1d = n_spec_1d * (w0 + w1d) / c_sol
+    kz_flat = np.sqrt(k_spec_1d ** 2 - kx1d ** 2 - ky1d ** 2)
+
+    # override the 3D kz with the flattened version for use in the ODE:
+    # (the odes() closure still sees kz_3d; you could unify but this is minimal)
+    # assume kz_3d broadcastable against operations in odes()
+
+    # -- Integrator setup ---------------------------------------------------
+    integrator = ode(odes).set_integrator('zvode', nsteps=1e6)
+
+    # -- Optional initial spectrum plot ------------------------------------
+    if module_checking_spectrum:
+        A3 = np.reshape(aspec, (x_resolution, y_resolution, t_resolution))
+        fig, ax = plt.subplots(figsize=(8, 7))
+        ax.plot(np.abs(A3[:, y_resolution // 2, t_resolution // 2]), 'b-', lw=6, label='x-cut')
+        ax.plot(np.abs(A3[x_resolution // 2, :, t_resolution // 2]), 'g-', lw=4, label='y-cut')
+        ax.plot(np.abs(A3[x_resolution // 2, y_resolution // 2, :]), 'r-', lw=4, label='t-cut')
+        ax.legend(shadow=True, fontsize=legend_font_size, loc='upper right')
+        plt.show()
+
+    # -- Main propagation loop ---------------------------------------------
+    for outer in range(loop_outer_kmax):
+        if module_checking_spectrum:
+            aspec = aspec.ravel()
+        for inner in range(1, loop_inner_m):
+            step = outer * loop_inner_m + inner
+            print("UPPE step:", step)
+            integrator.set_initial_value(aspec, 0.0)
+            aspec = integrator.integrate(dz)
+            aspec *= np.exp(1j * dz * (kz_3d - (w0 + w1d) / v_phase))
+        if module_checking_spectrum:
+            A3 = np.reshape(aspec, (x_resolution, y_resolution, t_resolution))
+            fig, ax = plt.subplots(figsize=(8, 7))
+            ax.plot(np.abs(A3[:, y_resolution // 2, t_resolution // 2]), 'b-', lw=6, label='x-cut')
+            ax.plot(np.abs(A3[x_resolution // 2, :, t_resolution // 2]), 'g-', lw=4, label='y-cut')
+            ax.plot(np.abs(A3[x_resolution // 2, y_resolution // 2, :]), 'r-', lw=4, label='t-cut')
+            ax.legend(shadow=True, fontsize=legend_font_size, loc='upper right')
+            plt.show()
+
+    # -- Return to real space ----------------------------------------------
+    A3 = np.reshape(aspec, (x_resolution, y_resolution, t_resolution))
+    E_final = ifftn(ifftshift(A3))
+    return E_final
+
+
+def plot_1D(x, y, label='', xlabel='', ylabel='', linestyle='-', linewidth=2,
+            color=None, legend=False, ax=None, ticks_font_size=12,
+            xy_label_font_size=14, legend_font_size=12):
+    """
+    Create a 1D line plot.
+
+    Parameters:
+        x (array-like): Values for the x-axis.
+        y (array-like): Values for the y-axis.
+        label (str): Label for the plot (for legend purposes).
+        xlabel (str): Label for the x-axis.
+        ylabel (str): Label for the y-axis.
+        linestyle (str): Line style (default '-').
+        linewidth (float): Line width (default 2).
+        color (str or None): Line color; if None, uses matplotlib default.
+        legend (bool): Whether to display the legend.
+        ax (matplotlib.axes.Axes or None): Axis to plot on; if None, use current axis.
+        ticks_font_size (int): Font size for tick labels.
+        xy_label_font_size (int): Font size for axis labels.
+        legend_font_size (int): Font size for the legend text.
+
+    Returns:
+        matplotlib.axes.Axes: The axes object with the plot.
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    # Plot the data (use the provided color if given)
+    if color is not None:
+        ax.plot(x, y, linestyle=linestyle, linewidth=linewidth, label=label, color=color)
+    else:
+        ax.plot(x, y, linestyle=linestyle, linewidth=linewidth, label=label)
+
+    # Set axis labels and tick parameters.
+    ax.set_xlabel(xlabel, fontsize=xy_label_font_size)
+    ax.set_ylabel(ylabel, fontsize=xy_label_font_size)
+    ax.tick_params(axis='both', labelsize=ticks_font_size)
+
+    # Display legend if requested and if a label is provided.
+    if legend and label:
+        ax.legend(shadow=True, fontsize=legend_font_size, facecolor='white',
+                  edgecolor='black', loc='upper right')
+    return ax
+
+
+def plot_2D(E, x, y, xlabel='', ylabel='', cmap='jet', vmin=None, vmax=None,
+            ax=None, ticks_font_size=12, xy_label_font_size=14):
+    """
+    Create a 2D image plot with a colorbar.
+
+    Parameters:
+        E (2D array): Data array to be plotted.
+        x (1D array): Values for the x-axis.
+        y (1D array): Values for the y-axis.
+        xlabel (str): Label for the x-axis.
+        ylabel (str): Label for the y-axis.
+        cmap (str): Colormap (default 'jet').
+        vmin (float or None): Minimum value for the colormap; if None, uses E.min().
+        vmax (float or None): Maximum value for the colormap; if None, uses E.max().
+        ax (matplotlib.axes.Axes or None): Axis to plot on; if None, use current axis.
+        ticks_font_size (int): Font size for tick labels.
+        xy_label_font_size (int): Font size for axis labels.
+
+    Returns:
+        matplotlib.axes.Axes: The axis object with the image plot.
+    """
+    if ax is None:
+        ax = plt.gca()
+
+    # Set vmin and vmax if not explicitly provided.
+    if vmin is None:
+        vmin = np.min(E)
+    if vmax is None:
+        vmax = np.max(E)
+
+    # Create the image plot; note the extent aligns x and y with the data.
+    extent = [y[0], y[-1], x[0], x[-1]]  # [left, right, bottom, top]
+    image = ax.imshow(E, interpolation='bilinear', cmap=cmap, origin='lower', aspect='auto',
+                      extent=extent, vmin=vmin, vmax=vmax)
+    # Attach colorbar to the provided axis.
+    cbar = plt.colorbar(image, ax=ax, shrink=0.9, pad=0.05, fraction=0.046)
+    cbar.ax.tick_params(labelsize=ticks_font_size)
+
+    # Set axis labels and tick parameters.
+    ax.set_xlabel(xlabel, fontsize=xy_label_font_size)
+    ax.set_ylabel(ylabel, fontsize=xy_label_font_size)
+    ax.tick_params(axis='both', labelsize=ticks_font_size)
+    return ax
+
+
+def plot_3D(field3D, x_start, x_finish, y_start, y_finish, t_start, t_finish,
+            x_resolution, y_resolution, t_resolution, isomin=40, isomax=40,
+            opacity=0.6, surface_count=1):
+    """
+    Create a 3D isosurface plot of a field using Plotly.
+
+    The function first builds a mesh grid for the (x, y, t) coordinates based on the
+    given spatial/temporal limits and resolutions. The intensity (|field|^2) is computed,
+    normalized, and then plotted as an isosurface.
+
+    Parameters:
+        field3D (ndarray): 3D field data with shape (x_resolution, y_resolution, t_resolution).
+        x_start, x_finish (float): Range for the x-axis.
+        y_start, y_finish (float): Range for the y-axis.
+        t_start, t_finish (float): Range for the t-axis.
+        x_resolution (int): Number of grid points in x.
+        y_resolution (int): Number of grid points in y.
+        t_resolution (int): Number of grid points in t.
+        isomin (float): Minimum value for the isosurface.
+        isomax (float): Maximum value for the isosurface.
+        opacity (float): Opacity of the isosurface (default 0.6).
+        surface_count (int): Number of isosurfaces to display.
+
+    Returns:
+        plotly.graph_objects.Figure: The Plotly figure object showing the isosurface.
+    """
+    # Create a mesh grid for x, y, and t.
+    X, Y, Z = np.mgrid[x_start:x_finish:1j * x_resolution,
+              y_start:y_finish:1j * y_resolution,
+              t_start:t_finish:1j * t_resolution]
+
+    # Compute the intensity (squared absolute value).
+    values = np.abs(field3D) ** 2
+    max_val = np.max(values)
+    # Normalize values to a percentage of max for plotting, unless max is zero.
+    values_norm = (values / max_val * 100) if max_val != 0 else values
+
+    # Create the isosurface plot with Plotly.
+    fig = go.Figure(data=go.Isosurface(
+        x=X.flatten(),
+        y=Y.flatten(),
+        z=Z.flatten(),
+        value=values_norm.flatten(),
+        opacity=opacity,
+        isomin=isomin,
+        isomax=isomax,
+        surface_count=surface_count,
+        caps=dict(x_show=False, y_show=False)
+    ))
+    # Update layout for clear axis labels.
+    fig.update_layout(scene=dict(
+        xaxis_title='X',
+        yaxis_title='Y',
+        zaxis_title='T'
+    ))
+    fig.show()
+    return fig
+
+
+if __name__ == '__main__':
+    # 1) Generate the initial field and grab the central time slice
+    field_temp = hobbit
+    E3d = field_temp(xyt_mesh[0], xyt_mesh[1], xyt_mesh[2])  # shape (x,y,t)
+    t_mid = t_resolution // 2
+    E_slice = E3d[:, :, t_mid]
+
+    # 2) Compute the “energy” (integral of |E|^2 dx dy) to normalize Imax
+    dx = x_array[1] - x_array[0]
+    dy = y_array[1] - y_array[0]
+    energy = np.sum(np.abs(E_slice) ** 2) * dx * dy
+
+    # 3) Find Imax so that total power Pmax is matched
+    Imax = np.sqrt(Pmax / energy)
+    print(f"Computed Imax = {Imax:e}")
+
+    # --- (optional) set the global or pass Imax into your shape functions here ---
+
+    # 4) Propagate the field along z
+    field_propagated = split_step_time_Z(
+        field_temp,
+        loop_inner_resolution,
+        loop_outer_resolution
+    )  # shape (x, y, z)
+
+    # 5) Plot a 2D slice: e.g. x vs. z at the central y
+    y_mid = y_resolution // 2
+    intensity_exponent = 2 if module_intensity else 1  # or whatever exponent you use
+    data_2d = np.abs(field_propagated[:, y_mid, :]) ** intensity_exponent
+
+    # convert to mm for plotting
+    x_mm = x_array * 1e3
+    z_mm = z_array * 1e3
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    plot_2D(
+        data_2d,
+        x_mm,
+        z_mm,
+        xlabel='z (mm)',
+        ylabel='x (mm)',
+        cmap='magma'
+    )
+    plt.title('Propagation slice at y = {:.2f} mm'.format(y_array[y_mid] * 1e3))
+    plt.show()

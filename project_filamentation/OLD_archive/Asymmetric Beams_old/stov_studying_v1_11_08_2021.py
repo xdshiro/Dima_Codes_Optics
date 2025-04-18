@@ -292,6 +292,6 @@ if __name__ == '__main__':
             #          fontsize=26)
             # plt.xlim(0.4, 0.8)
             # plt.ylim(0.4, 0.8)
-    if module_STOV:
+
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
