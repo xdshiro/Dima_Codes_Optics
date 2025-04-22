@@ -23,7 +23,7 @@ Usage:
 
 import numpy as np
 from numpy import ndarray, dtype, floating
-from numpy._typing import _64Bit
+
 from scipy.special import erf, jv, iv, assoc_laguerre
 from scipy.fft import fftn, ifftn, fftshift, ifftshift
 import matplotlib.pyplot as plt

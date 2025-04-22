@@ -22,7 +22,6 @@ from typing import Any
 
 import numpy as np
 from numpy import ndarray, dtype, floating
-from numpy._typing import _64Bit
 from scipy.special import erf, jv, iv, assoc_laguerre
 from scipy.fft import fftn, ifftn, fftshift, ifftshift
 import matplotlib.pyplot as plt
@@ -614,7 +613,7 @@ def split_step_time_Z(shape: callable, loopInnerM: int = 1, loopOuterKmax: int =
         Returns:
             np.ndarray: Plasma density array with the same (x, y, t) dimensions as E.
         """
-        plasma_density: ndarray[Any, dtype[floating[_64Bit]]] = np.zeros((x_resolution, y_resolution, t_resolution))
+        plasma_density = np.zeros((x_resolution, y_resolution, t_resolution))
         dt = t_array[1] - t_array[0] if t_resolution > 1 else t_finish
 
         if t_resolution == 1:
