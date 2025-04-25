@@ -1,0 +1,91 @@
+# Dima_Codes_Optics
+---
+
+## Installation Guide
+
+### 1. PyCharm Setup
+
+1. **Download Installer**
+   - Navigate to the
+     [JetBrains PyCharm Download Page (Windows)](https://www.jetbrains.com/pycharm/download/?section=windows).
+   - Select **Download .exe (Windows)**.
+
+2. **Installation Options**
+   During setup, ensure the following options are checked:
+   - **Add "Open Folder as Project"** to the context menu
+   - **Associate `.py` files** with PyCharm
+   - **Update PATH variable** to include the PyCharm `bin` directory
+
+3. **Post-Install**
+   - Complete the installation wizard
+   - Reboot the computer to finalize PATH changes
+
+### 2. Anaconda Configuration
+
+1. **Obtain Installer**
+   - Visit the
+     [Anaconda Distribution Download Page](https://www.anaconda.com/download).
+   - Submit your email to receive the Windows installer link.
+
+2. **Installation Options**
+   During the Anaconda installation, select:
+   - **Create desktop shortcuts** for core applications
+   - **Add Anaconda3 to the system PATH** (required)
+   - **Register Anaconda3 as the default Python 3.12 interpreter**
+
+3. **Finalize Setup**
+   - Allow the installer to complete (may require several minutes)
+   - Reboot the system once more
+
+---
+
+## Project Configuration in PyCharm
+
+1. **Launch via Anaconda Navigator**
+   - Open **Anaconda Navigator** and click **Launch** on the PyCharm tile.
+
+2. **Open Repository**
+   - In PyCharm, select **File ▶ Open** and choose the `Dima_Codes_Optics` directory.
+
+3. **Interpreter Assignment**
+   - Open `check_imports.py`.
+   - When prompted with **"No Python Interpreter configured for the project"**, click **Use `anaconda3\python.exe`**.
+   - Wait for the interpreter to initialize; the prompt will disappear once configured.
+
+---
+
+## Dependency Installation
+
+1. **Open the Python Console**
+   - In PyCharm, click the Python Console icon in the bottom-left panel (it resembles a diagonal cross with two dots at opposite ends).
+
+2. **Install required packages**
+   Execute the following commands in the console:
+
+   ```
+   pip install aotools
+   pip install pvtrace
+   ```
+
+Verify that each installation completes without errors.
+
+---
+
+## Validation and Usage
+
+1. **Sanity Check**
+   - Run `check_imports.py` (via **Run ▶ Run 'check_imports'** or **Shift+F10**).
+   - Confirm there are no import errors.
+
+2. **Script Execution**
+   - Execute any module or script from the IDE or command line.
+   - Consult in-code documentation (docstrings) for usage examples.
+
+
+---
+
+
+**Maintainer**: Dmitrii Tsvetkov (github: Shiro <cmexd8800@gmail.com>)
+
+*Last updated: April 25, 2025*
+

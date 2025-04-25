@@ -60,12 +60,12 @@ from aotools.turbulence.phasescreen import ft_sh_phase_screen as psh
 # ---------------------------
 # Adding package to the path
 # ---------------------------
-# Define the absolute path to the directory that contains the extra_functions_package
-path = "C:/Users/Cmex-/PycharmProjects/Dima_Codes_Optics"
-package_dir = os.path.abspath(path)
+# Automatically get the absolute path of the current script's directory
+package_dir = os.path.dirname(os.path.abspath(__file__))
+
 # Add this directory to sys.path if it's not already there
 if package_dir not in sys.path:
-    print("Adding " + package_dir + " to sys.path")
+    print(f"Adding {package_dir} to sys.path")
     sys.path.insert(0, package_dir)
 
 
