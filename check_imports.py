@@ -26,7 +26,9 @@ Description:
 # from scipy.interpolate import splprep, splev
 # from tqdm import trange
 # import plotly.graph_objects as go
-
+# import pvtrace as pv
+# for that in console you need to write: pip install pvtrace and restart after the installation
+# from scipy.ndimage import gaussian_filter
 
 
 
@@ -59,11 +61,14 @@ from aotools.turbulence.phasescreen import ft_sh_phase_screen as psh
 # Adding package to the path
 # ---------------------------
 # Define the absolute path to the directory that contains the extra_functions_package
-package_dir = os.path.abspath("C:/Users/Cmex-/PycharmProjects/Dima_Codes_Optics")
+path = "C:/Users/Cmex-/PycharmProjects/Dima_Codes_Optics"
+package_dir = os.path.abspath(path)
 # Add this directory to sys.path if it's not already there
 if package_dir not in sys.path:
     print("Adding " + package_dir + " to sys.path")
     sys.path.insert(0, package_dir)
+
+
 # ---------------------------
 # Package Check Routine
 # ---------------------------
