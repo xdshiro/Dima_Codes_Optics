@@ -69,7 +69,7 @@ foils = [[2, 2, 2, 2, 2, 2], [2, 1, 2, 2, 0, 2]]
 # Colormap for visualization
 custom_blues = plt.cm.gist_earth
 
-# Control Flags (set to 1/True to enable)
+# amount of samples to generate
 SAMPLES = 1
 plot = 1  # Field plotting
 plot_3d = 1  # 3D dot plotting

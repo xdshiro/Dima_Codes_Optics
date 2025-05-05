@@ -1,23 +1,29 @@
 """
 README:
 ------
-This script calculates the scintillation index using two different methods:
-  1. The scintillation index at the central point of the beam.
-  2. The average scintillation index over a central zone (7×7 region).
+This package is designed for calculating Strehl Ratio (SR) values and provides functions to compute
+other important turbulence parameters. It is not intended for full beam propagation simulations.
+Key turbulence parameters include:
+  - Fried parameter (r0): A measure of the coherence diameter of the atmosphere.
+  - Refractive index structure parameter (Cn2): Quantifies the strength of atmospheric turbulence.
 
-It is intended for turbulence analysis. In addition to the scintillation index, the script
-calculates key turbulence parameters:
-  - Fried parameter (r0): The coherence diameter of the atmosphere.
-  - Refractive index structure parameter (Cn2): A measure of the strength of atmospheric turbulence.
+Features:
+  - Calculation of SR values using a Gaussian Fourier method.
+  - Computation of turbulence metrics such as r0 and Cn2.
+  - External control over the number of calculation epochs.
+  - Optional plotting functionality to visualize fields and turbulence screens.
+  - you can set up the !!reversed propagation!! of the beam (from -L to 0 instead of
+  0 to L). For that you need to swap the part of the code in the end of run_simulation
 
 Usage:
   1. Adjust the simulation parameters at the bottom of the file.
-  2. Set the desired number of calculation epochs and the plotting flag.
-  3. Run the script to compute and compare the scintillation indices.
+  2. Set the desired number of epochs and toggle plotting via the provided flags.
+  3. Run the script to calculate the SR values and other turbulence parameters.
 
 Note:
   Ensure that the "extra_functions_package" is available in your Python path.
 """
+
 from extra_functions_package.all_knots_functions import *
 
 
@@ -53,10 +59,10 @@ def crop_field_3d(field_3d, crop_percentage):
     return cropped_field, end_x - start_x, end_y - start_y
 
 
-def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0,
-                   screens_nums, epochs=1, plot=False):
+def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0, screens_nums, epochs=1,
+                   plot=False):
     """
-    Calculate the scintillation index using two different methods.
+    Calculate the Strehl Ratio (SR) and turbulence parameters using the Gaussian Fourier method.
 
     Parameters:
         L_prop (float): Propagation distance.
@@ -72,10 +78,7 @@ def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0,
         plot (bool, optional): If True, plotting functions are executed. Default is False.
 
     Returns:
-        tuple: (scin_middle, scin_middle_avg, currents) where:
-            scin_middle: scintillation index at the center point,
-            scin_middle_avg: average scintillation index over a central zone,
-            currents: additional simulation outputs from the scintillation calculation.
+        tuple: (SR, currents_SR) simulation results.
     """
     # Define beam parameters
     lmbda = 532e-9  # wavelength in meters
@@ -109,35 +112,36 @@ def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0,
     if plot:
         plot_field_both(gaussian_beam, extend=None)
 
-    # Generate a phase screen and optionally plot its amplitude
-    phase_screen = psh_wrap(psh_par)
+    # Generate a phase screen and optionally plot its amplitude and phase
+    phase_screen = psh_wrap(psh_par, seed=1)
     if plot:
-        plot_field_both(phase_screen, extend=None)
+        plot_field(phase_screen, extend=None)
 
     # Propagate the beam through the turbulence screens (if needed for calculation)
     field_prop = propagation_ps(gaussian_beam, beam_par, psh_par, L_prop, screens_num=screens_nums)
     if plot:
         plot_field_both(field_prop)
 
-    # Calculate scintillation index using the provided function.
-    # This returns a 2D scintillation field and additional outputs.
-    scin, currents = scintillation(
+    # Calculate the Strehl Ratio using the Gaussian Fourier method with the specified number of epochs
+    SR, currents_SR = SR_gauss_fourier(
         mesh_2D, L_prop, beam_par, psh_par,
-        epochs=epochs, screens_num=screens_nums, seed=None
+        epochs=epochs,
+        screens_num=screens_nums,
+        max_cut=False,
+        pad_factor=4
     )
+    # you can set the reversed gaussian regime
+    # beam starts propagation from z=-L
 
-    # Method 1: Scintillation index at the center point of the 2D grid.
-    center_index = res_xy_2D // 2
-    scin_middle = scin[center_index, center_index]
+    # SR, currents_SR = SR_reversed_gauss_fourier(
+    #     mesh_2D, L_prop, beam_par, psh_par,
+    #     epochs=epochs,
+    #     screens_num=screens_nums,
+    #     max_cut=False,
+    #     pad_factor=4
+    # )
 
-    # Method 2: Average scintillation index over a central zone (7×7 region).
-    zone_slice = slice(center_index - 3, center_index + 4)
-    scin_middle_avg = np.average(scin[zone_slice, zone_slice])
-
-    print(f"[RESULT] Scintillation index at center: {scin_middle:.4e}")
-    print(f"[RESULT] Average scintillation index over central zone: {scin_middle_avg:.4e}")
-
-    return scin_middle, scin_middle_avg, currents
+    return SR, currents_SR
 
 
 # =============================================================================
@@ -145,15 +149,16 @@ def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0,
 # =============================================================================
 L_prop_values = [270]  # array of propagation lengths
 width0_values = [6e-3 / np.sqrt(2)]  # beam width
-xy_lim_2D_values = [(-45.0e-3, 45.0e-3)]  # window size
-res_xy_2D_values = [301]  # XY resolution
-Rytov_values = [0.05, 0.15, 0.25]  # Example turbulence cases
+xy_lim_2D_values = [(-70.0e-3, 70.0e-3)]  # window size
+res_xy_2D_values = [256]  # XY resolution
+Rytov_values = [0.25]  # Example turbulence cases
 l0_values = [3e-3]  # inner scale of turbulence
 L0_values = [10]  # outer scale of turbulence
 screens_numss = [1]  # amount of phase screens. everything is automated, just change the number
-# number of epochs should be high >500
-simulation_epochs = 1  # Adjust the number of epochs as needed
-enable_plotting = True  # Set to True to enable plotting
+
+# amount of epochs should be high (>500 at least)
+simulation_epochs = 5  # Set the number of epochs (adjust as needed)
+enable_plotting = True  # Set to True to enable plotting, False to disable
 
 # Ensure all parameter lists have the same length by repeating single-element lists
 max_len = max(len(L_prop_values), len(width0_values), len(xy_lim_2D_values),
@@ -168,12 +173,11 @@ l0_values = l0_values if len(l0_values) > 1 else l0_values * max_len
 L0_values = L0_values if len(L0_values) > 1 else L0_values * max_len
 
 # Zip parameters together for iterative simulation runs
-parameter_sets = list(zip(L_prop_values, width0_values, xy_lim_2D_values,
-                          res_xy_2D_values, Rytov_values, l0_values, L0_values))
+parameter_sets = list(
+    zip(L_prop_values, width0_values, xy_lim_2D_values, res_xy_2D_values, Rytov_values, l0_values, L0_values))
 
-scin_center_list = []
-scin_center_avg_list = []
 currents_list = []
+currents_SR_list = []
 
 # =============================================================================
 # Run Simulations
@@ -181,7 +185,7 @@ currents_list = []
 for params in parameter_sets:
     for screens_nums in screens_numss:
         print("\n==============================")
-        print("Running scintillation simulation with the following parameters:")
+        print("Running simulation with the following parameters:")
         print(f"  Propagation distance (L_prop): {params[0]}")
         print(f"  Beam width (width0): {params[1]:.4e}")
         print(f"  2D grid limits (xy_lim_2D): {params[2]}")
@@ -194,21 +198,19 @@ for params in parameter_sets:
 
         # External control for simulation epochs and plotting option
 
-        scin_middle, scin_middle_avg, currents = run_simulation(
+
+        currents, currents_SR = run_simulation(
             *params,
             screens_nums=screens_nums,
             epochs=simulation_epochs,
             plot=enable_plotting
         )
-        scin_center_list.append(scin_middle)
-        scin_center_avg_list.append(scin_middle_avg)
         currents_list.append(currents)
+        currents_SR_list.append(currents_SR)
 
-print("\n[RESULT] Scintillation index (center point):")
-print(scin_center_list)
-print("\n[RESULT] Average scintillation index over central zone:")
-print(scin_center_avg_list)
+print("\n[RESULT] Simulation currents list:")
+print(currents_list)
 
 # Optional: Save simulation results to files
-# np.save('scintillation_center.npy', np.array(scin_center_list))
-# np.save('scintillation_center_avg.npy', np.array(scin_center_avg_list))
+# np.save('arrays_scin.npy', np.array(currents_list))
+# np.save(f'arrays_SR_L{L_prop_values[0]}.npy', np.array(currents_SR_list))

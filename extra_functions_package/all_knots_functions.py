@@ -1553,6 +1553,34 @@ def trefoil_optimized_new(*args, **kwargs):
     return weights_important
 
 
+def LG_10(*args, **kwargs):
+    """
+    Function representing a new optimized version of the Trefoil braid field.
+
+    Parameters:
+    -----------
+    mesh_3D : tuple of ndarrays
+        The 3D mesh grids (x, y, z).
+    braid_func : callable
+        The function to generate the braid field.
+    modes_cutoff : float
+        Cutoff value for significant modes.
+    plot : bool
+        Whether to plot the resulting field or not.
+
+    Returns:
+    --------
+    weights_important : dict
+        A dictionary containing significant modes with keys 'l', 'p', and 'weight'.
+    """
+    l_save = [1]
+    p_save = [0]
+    weight_save = [1]  # Using the last version provided in the comments
+    weight_save /= np.sqrt(np.sum(np.array(weight_save) ** 2)) * 100
+    weights_important = {'l': l_save, 'p': p_save, 'weight': weight_save}
+    return weights_important
+
+
 def field_combination_LG(l, p, weights, values=0, mesh=0, w_real=0, k0=1, x0=0, y0=0, z0=0):
     """
     Combines LG modes based on quantum numbers and weights.

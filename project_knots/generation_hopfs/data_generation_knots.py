@@ -1,25 +1,33 @@
+"""
+A Python script to generate, simulate, and visualize 2D/3D optical knot fields (e.g., Hopf links, trefoils) under configurable turbulence conditions.  It computes field propagation, phase‐singularity extraction, modal spectra, and offers both flat‐field and 3D dot‐plot outputs.
+
+---
+
+## Features
+
+- **Multiple Knot Types**
+  - Standard and optimized Hopf links (`hopf_standard_14`, `hopf_optimized`, …)
+  - Standard and optimized trefoils (`trefoil_standard_12`, `trefoil_optimized`)
+- **Turbulence Simulation**
+  - Kolmogorov phase‐screen model with user-configurable Rytov variance
+  - Inner/outer scale, Fried parameter, Greenwood frequency
+- **Field Propagation**
+  - 2D propagation through turbulence
+  - 3D “beam expander” to recover volumetric knot structure
+- **Phase‐Singularity Extraction**
+  - Fast lookup of vortex cores
+  - Optional filtering of isolated spurious points
+- **LG Spectrum Analysis**
+  - Compute and plot modal power `(p, ℓ)` spectra
+- **Visualization & Output**
+  - Flat 2D field maps (`imshow`)
+  - 3D dot cloud of singularities (`plotDots`)
+  - NumPy‐saved field, spectrum, and singularity data files
+"""
+
 from extra_functions_package.all_knots_functions import *
 import math
 from tqdm import trange
-
-"""
-README:
-------
-This script performs a simulation to generate a 5-petal flower beam structure through turbulence.
- It:
-  - Sets up 3D and 2D meshes for the knot.
-  - Propagates the beam through phase screens.
-  - Extracts the field (and its singularities) after propagation.
-  - Optionally plots and saves intermediate fields, spectra, and singularity data.
-
-Controlling features (set in the configuration section below):
-  - Plotting: Toggle field plotting (plot), 3D dot plotting (plot_3d).
-  - Verbose output: Toggle detailed prints with print_values.
-  - Saving: Toggle saving of fields, spectra, and dots via save and spectrum_save.
-  - Filtering: Enable filtering of isolated singularity points via filter_flag.
-
-Make sure that the package “extra_functions_package.all_knots_functions” is in your PYTHONPATH.
-"""
 
 
 # ----------------------------------------------------------------------
@@ -61,11 +69,26 @@ def filter_isolated_points(dots):
 # Configuration and Control Flags
 # ----------------------------------------------------------------------
 
-# generating structure:
-knot_or_flower = unknot_5_any
-# foils array defines the sizes of the lobes of each flower beam. 2 - full size, 1 - half size, 0 - no petal
-foils = [[2, 2, 2, 2, 2, ],[2, 1, 2, 0, 2]]
+# possible generating structure:
+knot_types = {
+    'standard_14': hopf_standard_14,  # 1
+    'standard_16': hopf_standard_16,  # 2
+    'standard_18': hopf_standard_18,  # 3
+    '30both': hopf_30both,  # 4
+    '30oneZ': hopf_30oneZ,  # 5
+    'optimized': hopf_optimized,  # 6
+    'pm_03_z': hopf_pm_03_z,  # 7
+    '30oneX': hopf_30oneX,  # 11
+    '15oneZ': hopf_15oneZ,
+    'dennis': hopf_dennis,
+    'trefoil_standard_12': trefoil_standard_12,
+    'trefoil_optimized': trefoil_optimized,
 
+    # knots you want to generate
+}
+knots_to_generate = [
+    'standard_14', 'trefoil_optimized'
+]
 # Colormap for visualization
 custom_blues = plt.cm.gist_earth
 
@@ -176,12 +199,10 @@ for Rytov in Rytovs:
         psh_par = psh_par_0
 
     # Loop over each foil configuration
-    for foil in foils:
-        foil_str = ''.join(map(str, foil))
+    for knot in knots_to_generate:
         if print_values:
-            print("Processing foil:", foil)
-        values = knot_or_flower(mesh_3D_knot, braid_func=braid, plot=True,
-                              angle_size=foil, cmap=custom_blues)
+            print("Processing knot:", knot)
+        values = knot_types[knot](mesh_3D_knot, braid_func=braid, plot=False)
         field_before_prop = field_knot_from_weights(values, mesh_2D_original, width0, k0=k0, x0=0, y0=0, z0=z0)
 
         for indx in trange(SAMPLES, desc="Propagation Progress"):
@@ -202,7 +223,7 @@ for Rytov in Rytovs:
             if plot:
                 plot_field_both(field_z_crop, extend=extend_crop)
             if save:
-                np.save(f'foil5_field_XY_{Rytov}_{foil_str}.npy', field_z_crop)
+                np.save(f'knot_field_XY_{Rytov}_{knot}.npy', field_z_crop)
 
             if spectrum_save:
                 p1, p2 = 0, 10
@@ -218,7 +239,7 @@ for Rytov in Rytovs:
                 plt.xticks(np.arange(l1, l2 + 1))
                 plt.show()
                 if save:
-                    np.save(f'foil5_spectr_XY__{Rytov}_{foil_str}.npy', spectrum)
+                    np.save(f'knot_spectrum_XY__{Rytov}_{knot}.npy', spectrum)
 
             field_3d = beam_expander(field_z_crop, beam_par, psh_par_0, distance_both=knot_length, steps_one=res_z // 2)
             if centering:
@@ -254,7 +275,7 @@ for Rytov in Rytovs:
             scaled_xy = np.rint(xy * [scale_x, scale_y]).astype(int)
             scaled_data = np.column_stack((scaled_xy, z))
             if save:
-                np.save(f'foil5_dots_{Rytov}_{foil_str}.npy', dots_cut)
+                np.save(f'knot_dots_{Rytov}_{knot}.npy', dots_cut)
             if plot_3d:
                 dots_bound = [[0, 0, 0], [crop_3d, crop_3d, res_z + 1]]
                 pl.plotDots(dots_cut, dots_bound, color='black', show=True, size=10)

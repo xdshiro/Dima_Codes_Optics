@@ -110,9 +110,9 @@ def run_simulation(L_prop, width0, xy_lim_2D, res_xy_2D, Rytov, l0, L0,
         plot_field_both(gaussian_beam, extend=None)
 
     # Generate a phase screen and optionally plot its amplitude
-    phase_screen = psh_wrap(psh_par)
+    phase_screen = psh_wrap(psh_par, seed=1)
     if plot:
-        plot_field_both(phase_screen, extend=None)
+        plot_field(phase_screen, extend=None)
 
     # Propagate the beam through the turbulence screens (if needed for calculation)
     field_prop = propagation_ps(gaussian_beam, beam_par, psh_par, L_prop, screens_num=screens_nums)
@@ -152,8 +152,8 @@ l0_values = [3e-3]  # inner scale of turbulence
 L0_values = [10]  # outer scale of turbulence
 screens_numss = [1]  # amount of phase screens. everything is automated, just change the number
 # number of epochs should be high >500
-simulation_epochs = 1  # Adjust the number of epochs as needed
-enable_plotting = True  # Set to True to enable plotting
+simulation_epochs = 2  # Adjust the number of epochs as needed
+enable_plotting = False  # Set to True to enable plotting
 
 # Ensure all parameter lists have the same length by repeating single-element lists
 max_len = max(len(L_prop_values), len(width0_values), len(xy_lim_2D_values),

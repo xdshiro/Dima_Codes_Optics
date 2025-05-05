@@ -2,83 +2,41 @@ from extra_functions_package.all_knots_functions import *
 import math
 from tqdm import trange
 
-"""
-README:
-------
-This script performs a simulation to generate a 5-petal flower beam structure through turbulence.
- It:
-  - Sets up 3D and 2D meshes for the knot.
-  - Propagates the beam through phase screens.
-  - Extracts the field (and its singularities) after propagation.
-  - Optionally plots and saves intermediate fields, spectra, and singularity data.
-
-Controlling features (set in the configuration section below):
-  - Plotting: Toggle field plotting (plot), 3D dot plotting (plot_3d).
-  - Verbose output: Toggle detailed prints with print_values.
-  - Saving: Toggle saving of fields, spectra, and dots via save and spectrum_save.
-  - Filtering: Enable filtering of isolated singularity points via filter_flag.
-
-Make sure that the package “extra_functions_package.all_knots_functions” is in your PYTHONPATH.
-"""
-
-
-# ----------------------------------------------------------------------
-# Utility Function: Filter Isolated Points
-# ----------------------------------------------------------------------
-def filter_isolated_points(dots):
-    """
-    Filters out points that do not have any neighbors within a 2-step radius.
-
-    Parameters:
-        dots (numpy.ndarray): Array of integer coordinates with shape (N, 3).
-
-    Returns:
-        numpy.ndarray: Filtered array containing only points with at least one neighbor.
-    """
-    filtered_dots = []
-    dots_set = set(map(tuple, dots))
-    for dot in dots:
-        x, y, z = dot
-        neighbor_count = 0
-        for dx in range(-3, 4):
-            for dy in range(-3, 4):
-                for dz in range(-3, 4):
-                    if dx == 0 and dy == 0 and dz == 0:
-                        continue
-                    if (x + dx, y + dy, z + dz) in dots_set:
-                        neighbor_count += 1
-                    if neighbor_count > 2:
-                        filtered_dots.append(dot)
-                        break
-                if neighbor_count > 2:
-                    break
-            if neighbor_count > 2:
-                break
-    return np.array(filtered_dots)
-
 
 # ----------------------------------------------------------------------
 # Configuration and Control Flags
 # ----------------------------------------------------------------------
 
-# generating structure:
-knot_or_flower = unknot_5_any
-# foils array defines the sizes of the lobes of each flower beam. 2 - full size, 1 - half size, 0 - no petal
-foils = [[2, 2, 2, 2, 2, ],[2, 1, 2, 0, 2]]
+# possible generating structure:
+knot_types = {
+	'standard_14': hopf_standard_14,  # 1
+	'standard_16': hopf_standard_16,  # 2
+	'standard_18': hopf_standard_18,  # 3
+	'30both': hopf_30both,  # 4
+	'30oneZ': hopf_30oneZ,  # 5
+	'optimized': hopf_optimized,  # 6
+	'pm_03_z': hopf_pm_03_z,  # 7
+	'30oneX': hopf_30oneX,  # 11
+	'15oneZ': hopf_15oneZ,
+	'dennis': hopf_dennis,
+	'trefoil_standard_12': trefoil_standard_12,
+	'trefoil_optimized': trefoil_optimized,
 
+
+# knots you want to look at
+}
+knots_to_generate = [
+	'standard_14'
+]
 # Colormap for visualization
 custom_blues = plt.cm.gist_earth
 
-# amount of samples to generate
-SAMPLES = 1
+
 plot = 1  # Field plotting
 plot_3d = 1  # 3D dot plotting
-print_values = 0  # Verbose output
-save = True  # Save generated files
-spectrum_save = 1  # Save spectrum data
+print_values = 1  # Verbose output
 no_turb = 0  # Disable turbulence if set to 1
-filter_flag = False  # Apply filtering to singularities
-centering = False  # Use default centering for the knot
+
 
 # ----------------------------------------------------------------------
 # Simulation Parameters
@@ -111,7 +69,7 @@ multiplier2 = [1] * screens_num2
 Rytovs = [0.05]
 # Foil configurations (each is a list of integers representing angle sizes)
 seed = 1
-
+SAMPLES = 1
 # ----------------------------------------------------------------------
 # Pre-calculate 2D and 3D Meshes
 # ----------------------------------------------------------------------
@@ -176,12 +134,10 @@ for Rytov in Rytovs:
         psh_par = psh_par_0
 
     # Loop over each foil configuration
-    for foil in foils:
-        foil_str = ''.join(map(str, foil))
+    for knot in knots_to_generate:
         if print_values:
-            print("Processing foil:", foil)
-        values = knot_or_flower(mesh_3D_knot, braid_func=braid, plot=True,
-                              angle_size=foil, cmap=custom_blues)
+            print("Processing knot:", knot)
+        values = knot_types[knot](mesh_3D_knot, braid_func=braid, plot=False)
         field_before_prop = field_knot_from_weights(values, mesh_2D_original, width0, k0=k0, x0=0, y0=0, z0=z0)
 
         for indx in trange(SAMPLES, desc="Propagation Progress"):
@@ -201,31 +157,10 @@ for Rytov in Rytovs:
 
             if plot:
                 plot_field_both(field_z_crop, extend=extend_crop)
-            if save:
-                np.save(f'foil5_field_XY_{Rytov}_{foil_str}.npy', field_z_crop)
 
-            if spectrum_save:
-                p1, p2 = 0, 10
-                l1, l2 = -10, 10
-                moments = {'p': (p1, p2), 'l': (l1, l2)}
-                spectrum = cbs.LG_spectrum(field_center, **moments, mesh=mesh_2D_original, plot=False,
-                                           width=width0, k0=k0, functions=LG_simple, x0=0, y0=0)
-                spectrum = spectrum / np.sqrt(np.sum(np.abs(spectrum) ** 2)) * 100
-                pl.plot_2D(np.abs(spectrum), x=np.arange(l1 - 0.5, l2 + 1.5),
-                           y=np.arange(p1 - 0.5, p2 + 1.5), interpolation='none', grid=True,
-                           xname='l', yname='p', map=custom_blues, show=False)
-                plt.yticks(np.arange(p1, p2 + 1))
-                plt.xticks(np.arange(l1, l2 + 1))
-                plt.show()
-                if save:
-                    np.save(f'foil5_spectr_XY__{Rytov}_{foil_str}.npy', spectrum)
 
             field_3d = beam_expander(field_z_crop, beam_par, psh_par_0, distance_both=knot_length, steps_one=res_z // 2)
-            if centering:
-                x_cent_R, y_cent_R = find_center_of_intensity(field_z_crop)
-                x_cent, y_cent = int(x_cent_R), int(y_cent_R)
-            else:
-                x_cent, y_cent = crop // 2, crop // 2
+            x_cent, y_cent = crop // 2, crop // 2
             if print_values:
                 print(f'Center: {x_cent}, {y_cent} (crop size: {crop})')
 
@@ -237,8 +172,6 @@ for Rytov in Rytovs:
             field_3d_crop = field_3d_crop[:, :, :-1]
 
             dots_init_dict, dots_init = sing.get_singularities(np.angle(field_3d_crop), axesAll=False, returnDict=True)
-            if filter_flag:
-                dots_init = filter_isolated_points(dots_init)
             dots_cut_non_unique = cut_circle_dots(dots_init, crop_3d // 2, crop_3d // 2, crop_3d // 2)
             view = np.ascontiguousarray(dots_cut_non_unique).view(
                 np.dtype((np.void, dots_cut_non_unique.dtype.itemsize * dots_cut_non_unique.shape[1]))
@@ -253,8 +186,6 @@ for Rytov in Rytovs:
             z = dots_cut[:, 2]
             scaled_xy = np.rint(xy * [scale_x, scale_y]).astype(int)
             scaled_data = np.column_stack((scaled_xy, z))
-            if save:
-                np.save(f'foil5_dots_{Rytov}_{foil_str}.npy', dots_cut)
             if plot_3d:
                 dots_bound = [[0, 0, 0], [crop_3d, crop_3d, res_z + 1]]
                 pl.plotDots(dots_cut, dots_bound, color='black', show=True, size=10)

@@ -1,14 +1,9 @@
 import matplotlib.pyplot as plt
 
-from functions.all_knots_functions import *
-import os
-import pickle
-import csv
-import json
-from tqdm import trange
+from extra_functions_package.all_knots_functions import *
 import itertools
 from matplotlib.colors import LinearSegmentedColormap
-
+from tqdm import trange
 
 def filter_isolated_points_1(dots):
 	"""
@@ -124,7 +119,7 @@ center_plane = 1
 width0 = 6.0e-3 / np.sqrt(2)  # beam width
 xy_lim_2D_origin = (-30.0e-3, 30.0e-3)  # window size to start with
 # xy_lim_2D_origin = (-50.0e-3, 50.0e-3)  # window size to start with
-scale = 2
+scale = 1.5
 res_xy_2D_origin = int(scale * 300)  # resolution
 
 res_z = int(scale * 64)  # resolution of the knot is res_z+1
@@ -140,45 +135,20 @@ screens_num2 = 1
 multiplier2 = [1] * screens_num2
 
 knot_types = {
-	'standard_14': hopf_standard_14,  # 1
-	'standard_16': hopf_standard_16,  # 2
-	'standard_18': hopf_standard_18,  # 3
-	'30both': hopf_30both,  # 4
-	'30oneZ': hopf_30oneZ,  # 5
-	'optimized': hopf_optimized,  # 6
-	'pm_03_z': hopf_pm_03_z,  # 7
-	# '4foil': hopf_4foil,  # 8
-	# '6foil': hopf_6foil,  # 9
-	# 'stand4foil': hopf_stand4foil,  # 10
-	'30oneX': hopf_30oneX,  # 11
-	'15oneZ': hopf_15oneZ,
-	'dennis': hopf_dennis,
-	'trefoil_standard_12': trefoil_standard_12,
-	'trefoil_optimized': trefoil_optimized,
+	'LG_10': LG_10,  # 1
+
 }
 # turbulence
 # Cn2 = 1.35e-13  # turbulence strength  is basically in the range of 10−17–10−12 m−2/3
 # Cn2 = 3.21e-14
 # Cn2s = [5e-15, 1e-14, 5e-15, 1e-13]
 # Cn2 = Cn2s[0]
+
+
 knots = [
-	'standard_14', 'standard_16', 'standard_18', '30both', '30oneZ',
-	'optimized', 'pm_03_z', '30oneX', '15oneZ', 'dennis',
-	'trefoil_standard_12', 'trefoil_optimized'
-]
-knots = [
-	'standard_14',  # 1
-	'standard_16',  # 2
-	'standard_18',  # 3
-	'30both',  # 4
-	'30oneZ',  # 5
-	'optimized',  # 6
-	'pm_03_z',  # 7
-	'30oneX',  # 11
-	'15oneZ',
-	# 'dennis',
-	'trefoil_standard_12',
-	'trefoil_optimized',
+
+	'LG_10',  # 7
+
 ]
 Rytovs = [0.05]  # , 0.2]
 Rytovs = [0.03, 0.052, 0.091]  # 135
@@ -186,7 +156,7 @@ Rytovs = [0.03, 0.052, 0.091]  # 135
 Rytovs = [0.05, 0.15, 0.25]
 Rytovs = [0.05, 0.15, 0.25]
 # Rytovs = [0.00000000000000000000015]
-# Rytovs = [1e-40]
+Rytovs = [0.25]
 
 for Rytov in Rytovs:
 	# folder = f'standard_vs_WWW_trefoil_vs_rytov_{Rytov}_100_1.4zR_c03_v1'
@@ -296,6 +266,7 @@ for Rytov in Rytovs:
 			field_before_prop_spec_before, **moments, mesh=mesh_2D_original_spec, plot=False, width=width0, k0=k0,
 			functions=LG_simple, x0=0, y0=0, z0=z0
 		)
+
 		# print(values)
 		spectrum1 = spectrum1 / np.sqrt(np.sum(np.abs(spectrum1) ** 2)) * 100
 		vmin, vmax = 0, np.abs(spectrum1).max()
@@ -308,6 +279,22 @@ for Rytov in Rytovs:
 		plt.yticks(np.arange(p1, p2 + 1))
 		plt.xticks(np.arange(l1, l2 + 1))
 		plt.show()
+
+
+		p_values = np.arange(p1, p2 + 1)
+		l_values = np.arange(l1, l2 + 1)
+
+		# Compute absolute values of moments
+		abs_moments = np.abs(spectrum1)
+		valid_indices = np.argwhere(abs_moments > 1)
+		# Extract (l, p) pairs and moments, sorting first by p then by l
+		sorted_indices = sorted(valid_indices, key=lambda x: (x[0], x[1]))
+		lp_pairs = [(l_values[i], p_values[j]) for i, j in sorted_indices]
+		weights = np.array([spectrum1[i, j] for i, j in sorted_indices])
+		print(np.angle(weights) / np.pi)
+		# Print results
+		print("Pairs (l, p):", lp_pairs)
+		print("Weights:", np.round(weights / 10, 3))
 		np.save(f'hopf_spectr_before_{Rytov}_{knot}.npy', spectrum1)
 		
 		# if plot:
@@ -382,17 +369,17 @@ for Rytov in Rytovs:
 				plt.xticks(np.arange(l1, l2 + 1))
 				plt.show()
 				np.save(f'hopf_spectr_{Rytov}_{knot}.npy', spectrum)
-				
-				# if 1:
-				#     filename = f'../{folder}/data_{knot}_spectr.csv'  # l rows, p columns
-				#     spectrum_list = (
-				#             [moments['l'][0], moments['l'][1], moments['p'][0], moments['p'][1]] + [indx + indx_plus] +
-				#             [[x.real, x.imag] for x in spectrum.flatten()]
-				#     )
-				#     dots_json = json.dumps(spectrum_list)
-				#     with open(filename, 'a', newline='') as file:
-				#         writer = csv.writer(file)
-				#         writer.writerow([dots_json])
+			
+			# if 1:
+			#     filename = f'../{folder}/data_{knot}_spectr.csv'  # l rows, p columns
+			#     spectrum_list = (
+			#             [moments['l'][0], moments['l'][1], moments['p'][0], moments['p'][1]] + [indx + indx_plus] +
+			#             [[x.real, x.imag] for x in spectrum.flatten()]
+			#     )
+			#     dots_json = json.dumps(spectrum_list)
+			#     with open(filename, 'a', newline='') as file:
+			#         writer = csv.writer(file)
+			#         writer.writerow([dots_json])
 			# plot_field_both(field_center)
 			# exit()
 			field_3d = beam_expander(field_z_crop, beam_par, psh_par_0, distance_both=knot_length, steps_one=res_z // 2)
@@ -428,7 +415,7 @@ for Rytov in Rytovs:
 			_, idx = np.unique(view, return_index=True)
 			dots_cut = dots_cut_non_unique[idx]
 			
-			# decreasing the resolution of project_knots
+			# decreasing the resolution of knots
 			# knot_resolution = [crop_3d, crop_3d, res_z + 1]
 			original_resolution = (crop_3d, crop_3d)
 			
@@ -439,7 +426,7 @@ for Rytov in Rytovs:
 			scaled_xy = xy * [scale_x, scale_y]
 			scaled_xy = np.rint(scaled_xy).astype(int)
 			scaled_data = np.column_stack((scaled_xy, z))
-			dots_cut = filter_isolated_points(dots_cut)
+			# dots_cut = filter_isolated_points(dots_cut)
 			np.save(f'hopf_dots_{Rytov}_{knot}.npy', dots_cut)
 			# print(len(dots_cut))
 			################################################################################################
@@ -450,16 +437,16 @@ for Rytov in Rytovs:
 					[crop_3d, crop_3d, res_z + 1],
 				]
 				pl.plotDots(dots_cut, dots_bound, color='black', show=True, size=10)
-			
-			# break
-			# if no_last_plane:
-			#     knot_resolution = [new_resolution[0], new_resolution[0], res_z]
-			# else:
-			#     knot_resolution = [new_resolution[0], new_resolution[0], res_z + 1]
-			# dots_cut_modified = np.vstack([[indx + indx_plus, 0, 0], knot_resolution, scaled_data])
-			# if 1:
-			#     filename = f'../{folder}/data_{knot}.csv'
-			#     dots_json = json.dumps(dots_cut_modified.tolist())
-			#     with open(filename, 'a', newline='') as file:
-			#         writer = csv.writer(file)
-			#         writer.writerow([dots_json])
+	
+	# break
+	# if no_last_plane:
+	#     knot_resolution = [new_resolution[0], new_resolution[0], res_z]
+	# else:
+	#     knot_resolution = [new_resolution[0], new_resolution[0], res_z + 1]
+	# dots_cut_modified = np.vstack([[indx + indx_plus, 0, 0], knot_resolution, scaled_data])
+	# if 1:
+	#     filename = f'../{folder}/data_{knot}.csv'
+	#     dots_json = json.dumps(dots_cut_modified.tolist())
+	#     with open(filename, 'a', newline='') as file:
+	#         writer = csv.writer(file)
+	#         writer.writerow([dots_json])
