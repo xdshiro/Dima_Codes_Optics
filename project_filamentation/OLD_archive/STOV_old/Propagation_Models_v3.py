@@ -330,7 +330,7 @@ def UPPE_time(shape, loopInnerM, loopOuterKmax):
     # print(vPhase)
     # exit()
     # A0 = [Aspec]
-    #Equation (102) models beam propagation under the effects of diffraction and the optical
+    #Equation (102) evaluate_models_trained beam propagation under the effects of diffraction and the optical
     #Kerr effect, leading to beam self-focusing (for a positive n2)
     def ODEs(z, A):
         A *= np.exp(1j * z * (kz - (w0 + w1D) / vPhase))

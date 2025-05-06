@@ -1,3 +1,21 @@
+"""
+A simple driver script to generate, plot, and compare various optical knots
+(e.g. Hopf links, trefoils) in 2D and 3D.
+
+– Imports predefined knot‐generation routines from extra_functions_package
+– Configurable flags control:
+    • which knot(s) to generate
+    • number of turbulence realizations (Rytov variance)
+    • 2D field vs. 3D singularity‐dot plotting
+– Uses Von Karman phase‐screen model for optional turbulence
+– Extracts vortex singularities and displays them as 3D point clouds
+
+Usage:
+    1. Edit the “knots_to_generate” list and flag variables at the top.
+    2. Run the code
+"""
+
+
 from extra_functions_package.all_knots_functions import *
 import math
 from tqdm import trange
@@ -35,7 +53,6 @@ custom_blues = plt.cm.gist_earth
 plot = 1  # Field plotting
 plot_3d = 1  # 3D dot plotting
 print_values = 1  # Verbose output
-no_turb = 0  # Disable turbulence if set to 1
 
 
 # ----------------------------------------------------------------------
@@ -128,10 +145,8 @@ for Rytov in Rytovs:
     zR = k0 * width0 ** 2
     if print_values:
         print("Rayleigh Range (Zr) =", zR, "m")
-    psh_par = (r0, res_xy_2D_origin, pxl_scale, L0, l0)
     psh_par_0 = (r0 * 1e100, res_xy_2D_origin, pxl_scale, L0, l0 * 1e100)
-    if no_turb:
-        psh_par = psh_par_0
+    psh_par = psh_par_0
 
     # Loop over each foil configuration
     for knot in knots_to_generate:

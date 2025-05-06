@@ -1,7 +1,7 @@
 """
 This Python script provides functions for simulating optical turbulence and its effects on laser beams,
 including generating phase screens, computing Strehl ratios, and propagating beams through turbulent media.
-The script utilizes various mathematical models and tools for accurate simulations.
+The script utilizes various mathematical evaluate_models_trained and tools for accurate simulations.
 
 ## Import Statements
 
