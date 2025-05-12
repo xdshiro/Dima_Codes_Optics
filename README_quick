@@ -1,0 +1,113 @@
+# Dima Codes Optics
+
+A comprehensive collection of Python toolkits for structured-light propagation, optical knot and flower‑beam simulations, turbulence diagnostics, ray‑tracing analysis, and machine‑learning classification — all designed for research in computational photonics.
+
+---
+
+## 🚀 Repository Overview
+
+This repository consolidates multiple interrelated modules:
+
+1. **Core Utilities**
+
+   * **`extra_functions_package/`**: Shared routines for knot generation, beam propagation, and spectral analysis.
+   * **`check_imports.py`**: Verifies that all required third‑party packages are installed.
+
+2. **Iterative Optimization**
+
+   * **`helper_scripts_for_iterative_optimization/`**: Tools and drivers to tune knot modal coefficients via randomized searches.
+
+3. **Project Filamentation**
+
+   * **`project_filamentation/`**: Simulation frameworks for continuous‑wave and pulsed beam filamentation (HOBBIT beams, STOVs) using split‑step and ADI solvers.
+
+4. **Project Flower Beams**
+
+   * **`project_flower_beams/`**: Generation of multi‑petal (4–6 lobes) flower beam data under turbulence, ML classification pipelines, trained model checkpoints, and plotting notebooks for publication figures.
+
+5. **Project Knots**
+
+   * **`project_knots/`**: Generation and propagation of 2D/3D optical knot fields (Hopf links, trefoils) in turbulence; iterative optimization; Strehl‑ratio & scintillation metrics; visualization scripts.
+
+6. **Ray Tracing**
+
+   * **`project_ray_tracing/`**: PVTrace-based integrating‑sphere simulations, helper cross‑section utilities, and intensity‑volume plotting.
+
+7. **Thesis Extra Plots**
+
+   * **`thesis_extra_plots/`**: Additional NumPy data arrays and plotting scripts supporting thesis figures on Laguerre–Gaussian beams and knot singularities under turbulence.
+
+8. **Installation Guide**
+
+   * **`README_installation.md`**: Detailed setup instructions for Python environment and dependencies.
+
+9. **This Overview**
+
+   * **`README_overview.md`**: High‑level guide to the entire repository (you’re reading it now).
+
+---
+
+## ⚙️ Prerequisites & Installation
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/yourusername/Dima_Codes_Optics.git
+   cd Dima_Codes_Optics
+   ```
+
+2. **Create and activate a virtual environment**
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate    # Linux/MacOS
+   .\.venv\Scripts\activate   # Windows
+   ```
+
+3. **Install core dependencies**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   If `requirements.txt` is not provided, install manually:
+
+   ```bash
+   pip install numpy scipy matplotlib seaborn tqdm torch scikit-learn plotly aotools pvtrace
+   ```
+
+4. **Verify installations**
+
+   ```bash
+   python check_imports.py
+   ```
+
+   Ensure you see **"All required packages are installed."**
+
+---
+
+## 📂 Folder Structure & Quickstart
+
+```text
+├── extra_functions_package/       # Core optical utilities
+├── helper_scripts_for_iterative_optimization/
+├── project_filamentation/
+├── project_flower_beams/
+├── project_knots/
+├── project_ray_tracing/
+├── thesis_extra_plots/
+├── check_imports.py
+├── README_installation.md         # Detailed setup guide
+└── README_overview.md             # This high‑level guide
+```
+
+### Getting Started Tips
+
+* **Data Generation**: Start in `project_flower_beams/` or `project_knots/` with the respective `data_generation_*.py` scripts.
+* **Simulations**: Explore `project_filamentation/` for continuous‑wave and pulsed propagation workflows.
+* **Metrics**: Run `scintilation_calculation.py` and `SR_calculation.py` under `project_knots/SR_and_scintillation`.
+* **Machine Learning**: Jump to `project_flower_beams/ML_classification_knots_flower_beams` for training & evaluation notebooks.
+* **Plotting**: Use the publication plotting scripts in `paper_plots_flowers_ML` (under `project_flower_beams`).
+
+---
+

@@ -1,5 +1,5 @@
 """
-README:
+README_functions:
 ------
 This script calculates the scintillation index using two different methods:
   1. The scintillation index at the central point of the beam.

@@ -1,0 +1,103 @@
+# project_flower_beams
+
+Comprehensive toolkit for **optical knot & multi‑petal flower beam** simulation, **machine‑learning classification**, and **publication‑quality plotting** under atmospheric turbulence.
+
+---
+
+## 🚀 Project Overview
+
+This repository covers the full pipeline:
+
+1. **Data generation** of 3D knot singularities and 2D flower beam spectra under turbulence.
+2. **Machine‑learning classification**: training and evaluating 3D CNN & 2D CNN models on generated data.
+3. **Plotting**: all figures for the accompanying research paper (accuracy curves, confusion matrices, field visualizations).
+4. **Turbulence diagnostics**: Strehl ratio and scintillation index calculations.
+
+---
+
+## 📁 Folder Structure
+
+```text
+project_flower_beams/
+├── generation_flower_beams/         # Data generation for 4-,5-,6-petal beams
+│   ├── data_generation_4foils_in_turbulence.py
+│   ├── data_generation_5foils_in_turbulence.py
+│   ├── data_generation_6foils_in_turbulence.py
+│   ├── flower_beam_simulation.py    # Unified 4/5/6‑petal simulator
+│   └── README.md                    # This folder’s documentation
+│
+├── ML_classification_knots_flower_beams/  # ML training & evaluation pipelines
+│   ├── data_generation_for_ML/      # Convert raw fields into ML-ready CSVs
+│   ├── models_training/             # Training notebooks & model definitions
+│   ├── evaluate_models_trained/     # Inference & confusion matrix notebooks
+│   ├── best_models/                 # Top checkpoints and tuning notebooks
+│   └── README.md                    # ML pipeline documentation
+│
+├── paper_plots_flowers_ML/          # Scripts for publication figures
+│   ├── accuracy_exp_vs_samples/
+│   ├── histograms_plot_stability/
+│   ├── plot_5foils_6foils/
+│   ├── plot_braids/
+│   ├── plot_CM/
+│   ├── plot_foils/
+│   ├── plot_hopfs/
+│   └── plots_functions_general.py   # Shared plotting utilities
+│   └── README.md                    # Plotting documentation
+│
+└── SR_and_scintillation/            # Turbulence metric calculators
+    ├── scintilation_calculation.py  # Central & zonal scintillation index
+    ├── SR_calculation.py            # Strehl ratio & turbulence parameters
+    └── README.md                    # Scintillation/SR documentation
+```
+
+---
+
+## ⚙️ Installation & Dependencies
+
+* **Python**: 3.8 or newer
+* **Core libraries**: `numpy`, `scipy`, `matplotlib`, `seaborn`, `tqdm`, `torch`, `scikit-learn`
+* **Custom utilities**: `extra_functions_package.all_knots_functions` on your `PYTHONPATH`
+
+```bash
+pip install numpy scipy matplotlib seaborn tqdm torch scikit-learn
+export PYTHONPATH="/path/to/extra_functions_package:$PYTHONPATH"
+```
+
+---
+
+## 📊 Usage Guide
+
+### 1. Data Generation
+
+* Navigate to `generation_flower_beams/` and run:
+
+  ```bash
+  python data_generation_4foils_in_turbulence.py
+  python data_generation_5foils_in_turbulence.py
+  python data_generation_6foils_in_turbulence.py
+  # or
+  python flower_beam_simulation.py
+  ```
+* Outputs: `.npy` fields in `fields/`, `data_*_spectr.csv`, `data_*.csv` singularity lists.
+
+### 2. ML Classification
+
+* Jump to `ML_classification_knots_flower_beams/models_training/` notebooks to train models.
+* Use `evaluate_models_trained/` notebooks to load checkpoints and plot confusion matrices.
+* Top-performing weights in `best_models/` can be loaded via `classifier_models.py` definitions.
+
+### 3. Plotting for Publication
+
+* In `paper_plots_flowers_ML/`, execute specific scripts to regenerate figures:
+
+  * `accuracy_exp_vs_samples/plot_acc_vs_samples.py`
+  * `plot_CM/plot_knots_all.py` or `plot_4foils_all.py`, etc.
+* Customize data paths and styling in `plots_functions_general.py`.
+
+### 4. Turbulence Metrics
+
+* Run `SR_and_scintillation/scintilation_calculation.py` for scintillation indices.
+* Run `SR_and_scintillation/SR_calculation.py` for Strehl ratio & Rytov → Cₙ² → r₀ computations.
+
+---
+

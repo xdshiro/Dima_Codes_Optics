@@ -1,91 +1,161 @@
-# Dima_Codes_Optics
----
+# Welcome to **Dima’s Optical Toolkit** 👋
 
-## Installation Guide
+A **comprehensive**, **user-friendly** Python suite for:
 
-### 1. PyCharm Setup
+* **Structured-light simulations**: Laguerre–Gaussian beams, multi-petal flower beams, and 3D optical knots.
+* **Nonlinear propagation**: Continuous-wave & pulsed filamentation with split-step, ADI, and UPPE methods.
+* **Atmospheric effects**: Turbulence modeling (phase screens), scintillation index, and Strehl ratio.
+* **Ray tracing**: Integrating sphere simulations & 3D intensity-volume analysis using PVTrace.
+* **Machine learning**: Training and evaluating CNN classifiers for beam and knot recognition.
+* **Publication-quality plotting**: Spectrum maps, confusion matrices, field visualizations, and more.
 
-1. **Download Installer**
-   - Navigate to the
-     [JetBrains PyCharm Download Page (Windows)](https://www.jetbrains.com/pycharm/download/?section=windows).
-   - Select **Download .exe (Windows)**.
-
-2. **Installation Options**
-   During setup, ensure the following options are checked:
-   - **Add "Open Folder as Project"** to the context menu
-   - **Associate `.py` files** with PyCharm
-   - **Update PATH variable** to include the PyCharm `bin` directory
-
-3. **Post-Install**
-   - Complete the installation wizard
-   - Reboot the computer to finalize PATH changes
-
-### 2. Anaconda Configuration
-
-1. **Obtain Installer**
-   - Visit the
-     [Anaconda Distribution Download Page](https://www.anaconda.com/download).
-   - Submit your email to receive the Windows installer link.
-
-2. **Installation Options**
-   During the Anaconda installation, select:
-   - **Create desktop shortcuts** for core applications
-   - **Add Anaconda3 to the system PATH** (required)
-   - **Register Anaconda3 as the default Python 3.12 interpreter**
-
-3. **Finalize Setup**
-   - Allow the installer to complete (may require several minutes)
-   - Reboot the system once more
+> 🔧 **Before you start**, please read **README\_installation.md** to install Python and all required dependencies.
 
 ---
 
-## Project Configuration in PyCharm
+## 🚀 Quick Start (5–10 Minutes)
 
-1. **Launch via Anaconda Navigator**
-   - Open **Anaconda Navigator** and click **Launch** on the PyCharm tile.
+1. **Clone repository**
 
-2. **Open Repository**
-   - In PyCharm, select **File ▶ Open** and choose the `Dima_Codes_Optics` directory.
-
-3. **Interpreter Assignment**
-   - Open `check_imports.py`.
-   - When prompted with **"No Python Interpreter configured for the project"**, click **Use `anaconda3\python.exe`**.
-   - Wait for the interpreter to initialize; the prompt will disappear once configured.
-
----
-
-## Dependency Installation
-
-1. **Open the Python Console**
-   - In PyCharm, click the Python Console icon in the bottom-left panel (it resembles a diagonal cross with two dots at opposite ends).
-
-2. **Install required packages**
-   Execute the following commands in the console:
-
-   ```
-   pip install aotools
-   pip install pvtrace
+   ```bash
+   git clone https://github.com/yourusername/Dima_Codes_Optics.git
+   cd Dima_Codes_Optics
    ```
 
-Verify that each installation completes without errors.
+2. **Set up environment**
+
+   ```bash
+   python3 -m venv venv         # or `conda create -n optics python=3.9`
+   source venv/bin/activate     # Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+3. **Verify installations**
+
+   ```bash
+   python check_imports.py
+   ```
+
+   You should see:
+
+   > All required packages are installed.
+
+4. **Run your first simulation**
+
+   * **Flower beam (4 petals)**:
+
+     ```bash
+     python project_flower_beams/data_generation_4foils_in_turbulence.py
+     ```
+
+     *Outputs*: 2D slices (`.npy`), spectra CSVs, and singularity CSVs in `../HOPFS_*` folders.
+
+   * **Optical knot (Hopf link)**:
+
+     ```bash
+     python project_knots/generation_knots_in_turbulence/data_generation_knots_in_turbulence.py
+     ```
+
+     *Outputs*: 2D field images, 3D dot-cloud files, and LG spectrum CSVs.
+
+   * **CW filamentation**:
+
+     ```bash
+     python project_filamentation/HOBBIT_underwater_filamentation_along_CW.py
+     ```
+
+     *Outputs*: x–z cross-sections, energy curves, and CSV/Excel data exports.
+
+   * **Ray tracing**:
+
+     ```bash
+     python project_ray_tracing/holder_simulations_all.py
+     ```
+
+     Followed by:
+
+     ```bash
+     python project_ray_tracing/holder_diod_laser_plotting.py
+     ```
+
+     *Outputs*: 3D intensity volumes, cross-sections, cumulative energy plots.
 
 ---
 
-## Validation and Usage
+## 📁 Project Structure & Entry Points
 
-1. **Sanity Check**
-   - Run `check_imports.py` (via **Run ▶ Run 'check_imports'** or **Shift+F10**).
-   - Confirm there are no import errors.
-
-2. **Script Execution**
-   - Execute any module or script from the IDE or command line.
-   - Consult in-code documentation (docstrings) for usage examples.
-
+```
+Dima_Codes_Optics/
+├── extra_functions_package/             # Core routines: beams, phase-screens, spectra, singularities
+│   └── all_knots_functions.py           # Knot & beam generator functions
+│
+├── helper_scripts_for_iterative_optimization/
+│   └── optimize_knots.py                # Randomized search & tuning of knot modal weights
+│
+├── project_filamentation/               # Filamentation of CW & pulsed beams
+│   ├── HOBBIT_underwater_filamentation_along_CW.py    # CW solver (split-step, ADI)
+│   ├── HOBBIT_underwater_filamentation_along_t.py     # Time-domain pulsed solver
+│   ├── HOBBIT_underwater_filamentation_along_z.py     # z-domain cross-section plots
+│   └── STOV_air_paraxial_and_nonparaxial.py           # STOV pulse & UPPE solver
+│
+├── project_flower_beams/                # Flower beam data & ML pipelines
+│   ├── data_generation_4foils_in_turbulence.py
+│   ├── data_generation_5foils_in_turbulence.py
+│   ├── data_generation_6foils_in_turbulence.py
+│   ├── flower_beam_simulation.py        # Unified 4/5/6-petal simulator
+│   ├── ML_classification_knots_flower_beams/
+│   │   ├── data_generation_for_ML/      # CSV converters
+│   │   ├── models_training/             # Training notebooks & model definitions
+│   │   ├── evaluate_models_trained/     # Notebook evaluation & confusion matrices
+│   │   └── best_models/                 # Final checkpoints & tuning notebooks
+│   └── paper_plots_flowers_ML/          # Scripts for publication figures
+│
+├── project_knots/                       # Knot field generation & diagnostics
+│   ├── generation_knots_in_turbulence/  # 2D/3D knot field creation scripts
+│   ├── iterative_optimization/           # Optimization drivers
+│   ├── SR_and_scintillation/             # Scintillation & Strehl ratio scripts
+│   └── knot_research_and_plotting.py     # Batch plotting & data export
+│
+├── project_ray_tracing/                 # Integrating-sphere & intensity analysis
+│   ├── holder_simulations_all.py
+│   ├── holder_diod_laser_plotting.py
+│   └── helper_cross_sections.py
+│
+├── thesis_extra_plots/                  # Supplemental data & plot scripts for thesis
+│   ├── hopf_field_*.npy
+│   ├── hopf_spectr_*.npy
+│   ├── hopf_dots_*.npy
+│   ├── LG_beams.py
+│   ├── LG_in_turbulence.py
+│   └── singularity.py
+│
+├── check_imports.py                     # Checks installed Python packages
+├── requirements.txt                     # pip install dependencies
+├── README_installation.md               # Detailed installation instructions
+└── README_overview.md                   # (This file) Quickstart & guide
+```
 
 ---
 
+## ⚙️ Customization & Configuration
 
-**Maintainer**: Dmitrii Tsvetkov (github: Shiro <cmexd8800@gmail.com>)
+All scripts include a **Configuration** section at the top where you can adjust:
 
-*Last updated: April 25, 2025*
+* **Grid & resolution**: spatial (`x_lim`, `y_lim`), temporal (`t_lim`), propagation (`z_lim`).
+* **Beam parameters**: wavelength (`λ`), waist size (`w0`), OAM order (`ℓ`), pulse duration.
+* **Turbulence settings**: Rytov variance (`σ_R^2`), inner/outer scale, number of phase screens.
+* **Simulation controls**: number of Monte Carlo realizations, recursion depth, solver options.
+* **Plot toggles**: enable/disable intermediate plotting, color maps, figure sizes.
+
+Simply open the script in any text or notebook editor and modify the top block—no code changes needed.
+
+---
+
+## 📖 Learning Resources
+
+* **Jupyter Notebooks**: Found under `models_training/` and `paper_plots_flowers_ML/` for step-by-step tutorials.
+* **Docstrings & comments**: Each function in `extra_functions_package/` and main scripts is documented with usage examples.
+* **Examples**: Scripts save example images and CSVs; you can load these in Python interactively.
+
+---
 

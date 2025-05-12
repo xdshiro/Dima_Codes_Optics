@@ -1,0 +1,134 @@
+# project_filamentation
+
+Flexible, extensible simulation framework for propagating structured light fields in linear and nonlinear media, with built‑in support for “Hobbit” beams, asymmetric Laguerre–Gaussian profiles, and Spatio‑Temporal Optical Vortices (STOVs).
+
+---
+
+## 🔍 Overview
+
+This package provides multiple propagation solvers and beam generators to model continuous‑wave and pulsed beam dynamics under a variety of conditions (paraxial, nonparaxial, underwater turbulence, Kerr nonlinearity). You can swap in different field profiles and numerically integrate via split‑step or ADI schemes.
+
+---
+
+## 📂 Repository Structure
+
+```text
+project_filamentation/
+├── OLD_archive/                      # Legacy scripts
+│   └── ...
+│
+├── HOBBIT_underwater_filamentation_along_CW.py  # CW propagation (x,y,z)
+├── HOBBIT_underwater_filamentation_along_t.py   # Pulsed propagation (x,y,t)
+├── HOBBIT_underwater_filamentation_along_z.py   # Propagation along z slices (x,z)
+└── STOV_air_paraxial_and_nonparaxial.py        # STOV beam & UPPE solver
+```
+
+---
+
+## ⚙️ Key Features
+
+### 1. Propagation Solvers
+
+* **split_step_time / split_step_time_Z**
+  FFT-based split-step Fourier methods along time or z-domain.
+* **adi_2d1_nonlinear / adi_2d1_nonlinear_z**
+  Alternating Direction Implicit (ADI) scheme for 2D+time or 2D+z nonlinear propagation.
+* **UPPE_time**
+  Unidirectional Pulse Propagation Equation solver in time domain (non-paraxial).
+
+### 2. Beam Generators
+
+* **Hobbit profiles** via `u_far_hob2` and helper routines.
+* **Asymmetric Laguerre–Gaussian** beams.
+* **STOV variants**: `field_stov_1`, `field_stov_simple`, etc.
+
+### 3. Centralized Parameters
+
+* **Grid definitions**: spatial (x, y), temporal (t), propagation (z).
+* **Beam settings**: waist, wavelength, OAM order, pulse duration, chirp.
+* **Medium properties**: dispersion, refractive index, Kerr n₂, χ⁽³⁾, multiphoton ionization.
+* **Derived metrics**: wave number k₀, Rayleigh length, critical power, collapse length.
+
+### 4. Diagnostics & Visualization
+
+* **plot\_1D**: line cuts of intensity or phase.
+* **plot\_2D**: 2D intensity/phase maps or x–t/x–z cross‑sections.
+* **plot\_3D**: isosurface rendering via Plotly.
+* **Spectrum checks**: real‑time ω‑spectra when `module_checking_spectrum` is enabled.
+
+---
+
+## 🛠 Usage
+
+1. **Set module flags & parameters** at the top of your chosen script:
+
+   * `module_checking_spectrum`, `module_intensity`, `module_along_z`.
+   * Grid ranges (`x_lim`, `y_lim`, `t_lim`, `z_lim`), resolutions, and step sizes.
+   * Beam parameters (`tau_0`, `Pmax`, OAM ℓ, chirp, etc.).
+
+2. **Select or define a beam generator**:
+
+   ```python
+   from hobbit_helpers import u_far_hob2  # Hobbit profile
+   # or
+   from asymmetric_lg import asymmetric_lg
+   # or
+   from STOV_funcs import field_stov_1
+   ```
+
+3. **Call a propagation function**:
+
+   ```python
+   E_final = split_step_time_Z(u_far_hob2, M_steps, K_loops)
+   # or
+   E_t = split_step_time(field_fn, M_steps, K_loops)
+   # or
+   E_3D = UPPE_time(field_fn, M_steps, K_loops)
+   ```
+
+4. **Visualize results** using plotting utilities:
+
+   ```python
+   plot_2D(E_final[:,:,time_index], extend=...)
+   plot_3D(E_final, isovalue=0.1)
+   plot_1D(E_final[:, center_y, center_x])
+   ```
+
+---
+
+## ⚡ Example Workflows
+
+### Continuous‑Wave (CW) Filamentation
+
+* **Script**: `HOBBIT_underwater_filamentation_along_CW.py`
+* **Workflow**: Generate Hobbit beam → Normalize to Pmax → Propagate along z via split‑step or ADI → Plot x–z cross‑section.
+
+### Pulsed Filamentation (Time‑Domain)
+
+* **Script**: `HOBBIT_underwater_filamentation_along_t.py`
+* **Workflow**: Generate pulsed beam on (x,y,t) mesh → Normalize → Propagate via `split_step_time` → Plot x–t slices and ω‑spectrum.
+
+### Z‑Domain Propagation
+
+* **Script**: `HOBBIT_underwater_filamentation_along_z.py`
+* **Workflow**: Propagate pulses along z slices → Plot x–z maps at fixed t.
+
+### STOV Pulse Propagation
+
+* **Script**: `STOV_air_paraxial_and_nonparaxial.py`
+* **Workflow**: Choose STOV variant → Normalize → Propagate with split‑step or UPPE → Visualize with 1D/2D/3D plots.
+
+---
+
+## 📦 Dependencies
+
+* Python 3.7+
+* NumPy, SciPy
+* Matplotlib, Plotly (for 3D)
+* SciPy FFT & integrate modules
+
+## 🤝 Extensibility
+
+* **Add new beam profiles**: define in a helper module and pass to existing solvers.
+* **Implement custom solvers**: follow the `split_step_*` or ADI function patterns.
+* **Extend diagnostics**: add new plot utilities or spectral analyses.

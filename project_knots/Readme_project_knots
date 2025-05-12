@@ -1,0 +1,136 @@
+# project_knots
+
+End-to-end framework for **generating, simulating, optimizing, and analyzing** optical knot fields (e.g., Hopf links, trefoils) under turbulence.
+
+---
+
+## 🔍 Overview
+
+This project provides:
+
+1. **Data Generation**: Create 2D/3D knot fields with configurable Kolmogorov turbulence.
+2. **Iterative Optimization**: Tune modal weights to optimize singularity separation.
+3. **Turbulence Metrics**: Compute scintillation index and Strehl Ratio (SR).
+4. **Visualization & Analysis**: Plot fields, 3D singularity clouds, and LG modal spectra.
+
+---
+
+## 📁 Folder Structure
+
+```text
+project_knots/
+├── generation_knots_in_turbulence/   # Raw knot field generation under turbulence
+│   └── data_generation_knots_in_turbulence.py
+│
+├── iterative_optimization/            # Coefficient tuning for knot generation
+│   └── knot_optimization_iterative.py
+│
+├── SR_and_scintillation/              # Atmospheric turbulence diagnostics
+│   ├── scintilation_calculation.py     # Scintillation index methods
+│   └── SR_calculation.py               # Strehl Ratio & r₀, Cₙ² calculation
+│
+└── knot_research_and_plotting.py       # Driver for generation & plotting of knots
+```
+
+---
+
+## ⚙️ Key Capabilities
+
+### 1. Knot Generation & Propagation (`generation_knots_in_turbulence`)
+
+* **Knot Types**: Standard & optimized Hopf links (`hopf_standard_14`, `hopf_optimized`, …); trefoils (`trefoil_standard_12`, `trefoil_optimized`).
+* **Turbulence**: Kolmogorov phase‐screen model with configurable Rytov variance, inner/outer scale, Fried parameter.
+* **Outputs**:
+
+  * 2D field slices (`.npy`, imshow plots).
+  * 3D singularity dot clouds (`plotDots`, CSV serialization).
+  * LG modal spectra (`data_*_spectr.csv`).
+
+### 2. Iterative Optimization (`iterative_optimization`)
+
+* Randomized perturbation of modal coefficients.
+* Geometric criteria to maximize singularity separation.
+* Automated loop with convergence diagnostics.
+
+### 3. Turbulence Metrics (`SR_and_scintillation`)
+
+* **Scintillation Index**:
+
+  * Point-wise at beam center.
+  * Averaged over central 7×7 region.
+* **Strehl Ratio**:
+
+  * Gaussian-Fourier and phase-screen methods.
+  * Computes Fried parameter (r₀) and Cₙ² from Rytov variance.
+
+### 4. Visualization & Analysis (`knot_research_and_plotting.py`)
+
+* Batch generation of selected knots.
+* Configurable flags for 2D vs. 3D plotting.
+* Saves field maps, spectrum plots, and singularity CSVs.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Installation
+
+```bash
+pip install numpy scipy matplotlib seaborn tqdm torch
+export PYTHONPATH="/path/to/extra_functions_package:$PYTHONPATH"
+```
+
+### 2. Generate Knot Data
+
+```bash
+python generation_knots_in_turbulence/data_generation_knots_in_turbulence.py
+```
+
+Adjust top-of-file configs for Rytov, grid resolution, and knot list.
+
+### 3. Optimize Coefficients
+
+```bash
+python iterative_optimization/knot_optimization_iterative.py
+```
+
+Configure optimization parameters (iterations, step size).
+
+### 4. Compute Turbulence Metrics
+
+```bash
+python SR_and_scintillation/scintilation_calculation.py
+python SR_and_scintillation/SR_calculation.py
+```
+
+Toggle `plot` flags and specify epoch counts.
+
+### 5. Plot & Analyze Knots
+
+```bash
+python knot_research_and_plotting.py
+```
+
+Select `knots_to_generate`, toggle 2D/3D, and run.
+
+---
+
+## 🛠 Configuration Options
+
+Each script has a **Configuration** block at the top, where you can:
+
+* Select which knot(s) to simulate.
+* Set turbulence parameters (`Rytov`, `inner_scale`, `outer_scale`).
+* Choose resolution, number of realizations, and seed for reproducibility.
+* Toggle plotting (`plot`, `plot_3d`, `plot_short`).
+
+---
+
+## 📄 File Formats & Data
+
+* `.npy`: raw field slices.
+* `.csv`: JSON‑encoded lists for spectral moments and singularity coordinates.
+* `.png`/`.pdf`: saved plots.
+
+---
+

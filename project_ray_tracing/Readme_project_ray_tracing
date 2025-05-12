@@ -1,0 +1,104 @@
+# project\_ray\_tracing
+
+Tools for **ray-tracing optical setups** with PVTrace, **integrating sphere simulations**, and **intensity-volume analysis**.
+
+---
+
+## 📂 Folder Structure
+
+```text
+project_ray_tracing/
+├── helper_cross_sections.py        # Utility functions for cross-section extraction and energy integration
+├── holder_simulations_all.py       # Integrating sphere PVTrace simulations for various sample cases
+└── holder_diod_laser_plotting.py   # Load, crop, smooth, and plot 3D intensity volumes & energy curves
+```
+
+---
+
+## 🛠 Scripts Overview
+
+### 1. holder_simulations_all.py
+
+Constructs and ray-traces an **integrating sphere** setup using PVTrace:
+
+* Defines cylinder and sample-holder geometry (holder and bottom aperture).
+* Configurable optical cases (e.g., RZ11, Z7, RZ13) with distinct transmission/reflection coefficients.
+* Computes:
+
+  * **Transmission** (*T*), direct transmission (*T\_dir*), reflection (*R*), absorption (*A*).
+  * Path lengths: absorption (*L\_A*), attenuation (*L*), scattering (*L\_S*).
+* Monkey-patches PVTrace Fresnel refraction for total internal reflection support.
+* Implements `PartialTopSurfaceMirror` delegate for selective mirror surfaces.
+* Provides beam-source utilities for collimated/focused Gaussian beams.
+* Converts ray trajectories into:
+
+  * **3D intensity arrays** (`array_3D_intensity_from_dots`).
+  * **2D planar projections** (`plane_intensity`).
+* **main()** driver runs simulations, saves raw ray positions and intensity volumes, and optionally plots cross-sectional slices.
+
+### 2. holder_diod_laser_plotting.py
+
+Processes **3D intensity volumes** produced by PVTrace:
+
+1. **Load** saved `.npy` intensity volume from integrating-sphere ray trace.
+2. **Crop** to a user-defined real-world sub-region.
+3. **Smooth** volume via Gaussian filtering.
+4. **Extract & plot**:
+
+   * Central X–Z cross-section at mid-Y plane (`plot_2D`).
+   * Cumulative energy within a circular aperture vs. Z (`plot_1D`).
+5. **Export** cross-section data and energy curve to CSV and Excel formats.
+
+### 3. helper_cross_sections.py
+
+Helper utilities used by the plotting script:
+
+* **`extract_cross_section(volume, axis, index)`**: Returns a 2D slice along X–Z, Y–Z, or X–Y planes.
+* **`compute_cumulative_energy(slice2D, center, radius)`**: Integrates energy within a circular aperture for each Z-slice.
+* **`smooth_volume(volume, sigma)`**: Applies Gaussian smoothing to 3D data.
+* Plot styling and axis labeling helpers.
+
+---
+
+## 🚀 Usage Workflow
+
+1. **Run integrating-sphere simulations**:
+
+   ```bash
+   python holder_simulations_all.py
+   ```
+
+   Adjust sample-case flags and PVTrace parameters in the top section.
+
+2. **Analyze and plot intensity volumes**:
+
+   ```bash
+   python holder_diod_laser_plotting.py
+   ```
+
+   Configure:
+
+   * Input volume path (`.npy`).
+   * Crop bounds (X/Y/Z ranges).
+   * Gaussian smoothing sigma.
+   * Circular aperture radius for energy integration.
+
+3. **(Optional)** Call helper functions interactively:
+
+   ```python
+   from helper_cross_sections import extract_cross_section, compute_cumulative_energy
+   ```
+
+---
+
+## ⚙️ Configuration Options
+
+Each script exposes top-of-file flags for:
+
+* **PVTrace parameters** (`n_rays`, `max_bounces`, material properties).
+* **Geometry settings** (sphere radius, holder dimensions, sample position).
+* **Plotting toggles** (`plot_2D`, `plot_1D`, `export_csv`).
+* **Smoothing** (`sigma`).
+
+---
+

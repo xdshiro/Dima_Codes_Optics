@@ -1,0 +1,13 @@
+numpy
+scipy
+pandas
+matplotlib
+seaborn
+tqdm
+scikit-learn
+torch
+torchsummary
+plotly
+aotools
+pvtrace
+openpyxl

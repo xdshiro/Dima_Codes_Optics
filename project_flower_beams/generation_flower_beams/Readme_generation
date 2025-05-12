@@ -1,0 +1,82 @@
+# generation_flower_beams
+
+This folder contains scripts to simulate and generate multi-petal “flower beam” optical fields under atmospheric turbulence. Each script produces 2D field slices, Laguerre–Gaussian spectra, and singularity data for 4‑, 5‑, and 6‑petal beam structures, plus a versatile simulation helper.
+
+## Scripts
+
+* **flowers_research_and_plotting.py**
+  Generate and visualize multi-petal “flower” beams (4, 5, or 6 lobes).
+  **Features:**
+
+  * Choose beam type via `knot_or_flower` flag (`unknot_4_any`, `unknot_5_any`, `unknot_6_any`).
+  * Define petal sizes in `foils` list: 2 = full, 1 = half, 0 = none.
+  * Compute 2D field slices and 3D singularity dot plots.
+  * Optional turbulence propagation via Kolmogorov phase screens.
+  * Center-plane propagation & beam expansion for 3D structure.
+  * Toggle plotting (`plot`, `plot_3d`), verbosity (`print_values`), and saving.
+
+* **data_generation_4foils_in_turbulence.py**
+  Simulates a *4-petal* flower beam through turbulence.
+
+* **data_generation_5foils_in_turbulence.py**
+  Simulates a *5-petal* flower beam through turbulence.
+
+* **data_generation_6foils_in_turbulence.py**
+  Simulates a *6-petal* flower beam through turbulence.
+
+All scripts share the same pipeline:
+
+1. **Mesh Setup**
+   • Define 3D extraction grid and 2D sampling window.
+   • Set optical parameters (wavelength, beam waist, propagation distance).
+
+2. **Turbulence Configuration**
+   • Compute Rytov variance, Fried parameter (r₀), and phase-screen parameters.
+   • Toggle turbulence on/off via configuration flags.
+
+3. **Beam Generation**
+   • Load or compute modal weights using `extra_functions_package.all_knots_functions`.
+   • Build the initial complex field and normalize its energy.
+
+4. **Monte Carlo Propagation**
+   • Propagate the field through a series of random phase screens.
+   • Crop the central 2D slice and save as `.npy` files under `fields/`.
+
+5. **Spectrum & Singularity Extraction**
+   • Compute Laguerre–Gaussian (LG) spectral moments; append to `data_*_spectr.csv`.
+   • Expand the cropped slice into 3D, extract optical singularities, and serialize into `data_*.csv`.
+
+## Configuration Options
+
+Modify the “Configuration” block at the top of each script to control:
+
+* **Petal Count**: Script choice or `flower_beam_simulation.py` setting (4‑, 5‑, or 6‑petal).
+
+* **Plotting:**
+
+  * `plot` — show intermediate intensity/phase fields.
+  * `plot_3d` — visualize 3D singularity scatter.
+  * `plot_short` — suppress verbose plotting.
+
+* **Verbosity:**
+
+  * `print_values` — print computed parameters (r₀, Cₙ²).
+  * `print_coeff` — print modal weights.
+
+* **Saving:**
+
+  * `spectrum_save` — enable LG spectrum CSV output.
+  * Default `.npy` slices and `.csv` singularity files are saved under `../<folder>/fields`.
+
+* **Filtering:**
+
+  * `filter_flag` (if present) — remove isolated singularity points.
+
+* **Random Seed:**
+
+  * `seed` — fix RNG for reproducible phase screens.
+
+* **Turbulence Toggle:**
+
+  * `no_turb` — bypass turbulence with identity phase screens.
+

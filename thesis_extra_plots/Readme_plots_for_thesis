@@ -1,0 +1,74 @@
+# thesis\_extra\_plots
+
+This folder contains auxiliary data and plotting scripts used to generate supplemental figures for the thesis, including precomputed Hopf-knot field slices, spectra, and singularity dot clouds, as well as utilities to visualize Laguerre–Gaussian beams and extract vortex cores.
+
+---
+
+## 📂 Folder Contents
+
+```
+thesis_extra_plots/
+├── hopf_field_*.npy            # Precomputed 2D Hopf-knot field slices under various Rytov variances
+├── hopf_spectr_*.npy           # Corresponding LG spectrum arrays (normalized moments)
+├── hopf_dots_*.npy             # 3D singularity coordinate lists for each scenario
+│
+├── LG_beams.py                 # Script to plot amplitude & phase of canonical LG modes
+├── LG_in_turbulence.py         # Simulation & plotting of LG beams propagating through turbulence
+├── singularity.py              # Utilities to identify and filter phase-singularity points in 3D data
+```
+
+---
+
+## Scripts Overview
+
+### 1. LG\_beams.py
+
+Generates a 2×4 grid of amplitude and phase plots for Laguerre–Gaussian modes `(l,p) = (0,0), (0,1), (1,0), (1,1)`:
+
+* Defines `LG_simple` to compute complex field values on an XY grid.
+* Configures global plotting parameters (font, margins, colorbars).
+* Normalizes amplitude across modes and displays shared colorbars for amplitude and phase.
+
+**Usage:**
+
+```bash
+python LG_beams.py
+```
+
+Produces an on-screen figure of amplitude (top row) and phase (bottom row) for the four modes.
+
+### 2. LG\_in\_turbulence.py
+
+Simulates LG beam propagation under Kolmogorov turbulence and plots resulting spectra:
+
+* Defines `filter_isolated_points` and `filter_isolated_points_1` to clean 3D singularity data.
+* Configures a range of Rytov variances (`Rytovs`) and knot/foil parameters.
+* Uses functions from `extra_functions_package.all_knots_functions` to compute pre- and post-turbulence fields.
+* Saves and plots spectrum arrays and field slices for each Rytov case.
+
+**Usage:**
+
+```bash
+python LG_in_turbulence.py
+```
+
+Adjust flags at the top for sample count, verbosity, plotting toggles, and turbulence on/off.
+
+### 3. singularity.py
+
+Collection of helper functions for processing 3D singularity point clouds:
+
+* `filter_isolated_points_1(dots)` — removes points without any immediate (1-voxel) neighbors.
+* `filter_isolated_points(dots)` — removes points with fewer than two neighbors within a 2-voxel radius.
+
+## Data Files (.npy)
+
+The `.npy` files store NumPy arrays for quick loading in interactive sessions:
+
+* `hopf_field_<Rytov>_LG_<mode>.npy`: 2D intensity arrays of knot center-plane slices.
+* `hopf_spectr_<Rytov>_LG_<mode>.npy`: 2D LG spectrum of that slice.
+* `hopf_dots_<Rytov>_LG_<mode>.npy`: Coordinates of detected vortex cores in the 3D volume.
+
+
+
+*These scripts and data files support thesis figures on LG-beam behavior and knot singularity stability under turbulence.*

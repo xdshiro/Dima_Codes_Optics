@@ -3,7 +3,7 @@ import math
 from tqdm import trange
 
 """
-README:
+README_functions:
 ------
 This script performs a simulation to generate a 4-petal flower beam structure through turbulence.
  It:

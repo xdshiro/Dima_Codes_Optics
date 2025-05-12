@@ -1,5 +1,5 @@
 """
-README:
+README_functions:
 ------
 This package is designed for calculating Strehl Ratio (SR) values and provides functions to compute
 other important turbulence parameters. It is not intended for full beam propagation simulations.

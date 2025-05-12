@@ -1,81 +1,68 @@
 """
 File: check_imports.py
 Description:
-    This file demonstrates the proper ordering of imports and includes a routine to verify that
-    all required packages/modules are installed. It is divided into two main sections:
-      1. Standard library imports
-      2. Third-party imports
+    Demonstrates proper ordering of imports: standard library first, followed by third-party modules.
+    Verifies that all required dependencies are installed; lists missing packages.
 
-    If any required package is missing, a message is printed listing the missing modules.
-    Otherwise, it confirms that all packages are installed.
+    To include new modules, add them to the `modules_to_check` list below and rerun.
+    For pvtrace: install with `pip install pvtrace` then restart your Python environment.
 """
 
-### !!!!!
-# add these to the list:
-# import itertools
-# from matplotlib.colors import LinearSegmentedColormap
-# from scipy.stats import norm
-# import plotly.graph_objects as go
-#
-# from sklearn.preprocessing import PolynomialFeatures
-# from sklearn.linear_model import LinearRegression
-# from sklearn.pipeline import make_pipeline
-# from sklearn.neighbors import NearestNeighbors
-#
-# from scipy.interpolate import UnivariateSpline
-# from scipy.interpolate import splprep, splev
-# from tqdm import trange
-# import plotly.graph_objects as go
-# import pvtrace as pv
-# for that in console you need to write: pip install pvtrace and restart after the installation
-# from scipy.ndimage import gaussian_filter
-
-
-
-# ---------------------------
-# Standard Library Imports
-# ---------------------------
+# ---------------------------------------------------------------------------- #
+# 1. Standard Library Imports
+# ---------------------------------------------------------------------------- #
 import importlib
 import os
 import sys
-from os import listdir
-from os.path import isfile, join
+import itertools
 import pickle
 
-# ---------------------------
-# Third-Party Imports
-# ---------------------------
+# ---------------------------------------------------------------------------- #
+# 2. Third-Party Imports
+# ---------------------------------------------------------------------------- #
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+
+import scipy
 import scipy.io as sio
 from scipy.special import assoc_laguerre
-from scipy.interpolate import CloughTocher2DInterpolator
+from scipy.stats import norm
+from scipy.interpolate import UnivariateSpline, splprep, splev, CloughTocher2DInterpolator
 from scipy import integrate
 from scipy.fftpack import fft2, ifft2, fftshift, ifftshift
+from scipy.ndimage import gaussian_filter
+
 import plotly.graph_objects as go
+import pvtrace as pv  # pip install pvtrace
+
 from aotools import opticalpropagation
 from aotools.turbulence.phasescreen import ft_sh_phase_screen as psh
 
-# ---------------------------
-# Adding package to the path
-# ---------------------------
-# Automatically get the absolute path of the current script's directory
-package_dir = os.path.dirname(os.path.abspath(__file__))
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.neighbors import NearestNeighbors
 
-# Add this directory to sys.path if it's not already there
+from tqdm import trange
+
+# ---------------------------------------------------------------------------- #
+# 3. Add current directory to sys.path
+# ---------------------------------------------------------------------------- #
+package_dir = os.path.dirname(os.path.abspath(__file__))
 if package_dir not in sys.path:
     print(f"Adding {package_dir} to sys.path")
     sys.path.insert(0, package_dir)
 
+# ---------------------------------------------------------------------------- #
+# 4. Dependency Check Routine
+# ---------------------------------------------------------------------------- #
 
-# ---------------------------
-# Package Check Routine
-# ---------------------------
 def check_package(module_name):
     """
-    Attempts to import a module by name.
-    Returns True if the module is successfully imported, False otherwise.
+    Attempt to import a module by name.
+    Returns True if successful, False otherwise.
     """
     try:
         importlib.import_module(module_name)
@@ -83,29 +70,38 @@ def check_package(module_name):
     except ImportError:
         return False
 
-# List of module names to check
+# List all modules to verify
 modules_to_check = [
-    "os",
-    "pickle",
-    "numpy",
-    "pandas",
-    "matplotlib.pyplot",
-    "scipy.io",
-    "scipy.special",
-    "scipy.interpolate",
-    "scipy",
-    "scipy.fftpack",
+    # Standard library
+    "os", "sys", "itertools", "pickle",
+    # Numeric & data handling
+    "numpy", "pandas",
+    # Plotting
+    "matplotlib", "matplotlib.colors",
+    # SciPy subpackages
+    "scipy", "scipy.io", "scipy.special", "scipy.stats", "scipy.interpolate",
+    "scipy.integrate", "scipy.fftpack", "scipy.ndimage",
+    # Interactive graphics
     "plotly.graph_objects",
-    "aotools",
-    "aotools.turbulence.phasescreen"
+    # Ray tracing
+    "pvtrace",
+    # Atmospheric optics
+    "aotools", "aotools.turbulence.phasescreen",
+    # Machine learning
+    "sklearn.preprocessing", "sklearn.linear_model", "sklearn.pipeline", "sklearn.neighbors",
+    # Progress bars
+    "tqdm"
 ]
 
-# Check for missing modules
-missing_modules = [mod for mod in modules_to_check if not check_package(mod)]
+missing = []
+for mod in modules_to_check:
+    if not check_package(mod):
+        missing.append(mod)
 
-if missing_modules:
-    print("The following packages/modules are not installed:")
-    for mod in missing_modules:
-        print(" -", mod)
+if missing:
+    print("Missing packages/modules detected:")
+    for m in missing:
+        print(f" - {m}")
+    print("Install with pip, e.g.: pip install " + " ".join({m.split('.')[0] for m in missing}))
 else:
-    print("All packages are installed.")
+    print("All required packages are installed.")

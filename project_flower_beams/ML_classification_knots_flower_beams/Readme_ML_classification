@@ -1,0 +1,128 @@
+# ML Classification: Knots & Flower Beams
+
+This repository provides a complete pipeline for generating, training, and evaluating machine‑learning classifiers on 3D optical knot fields and 2D spectral (flower beam) data. You’ll find scripts and notebooks for data generation, model training, and evaluation, as well as a collection of pre‑trained models.
+
+---
+
+## 📁 Repository Structure
+
+```
+ML_classification_knots_flower_beams/
+├── best_models/
+│   ├── .ipynb_checkpoints/       # Auto‑saved checkpoint notebooks
+│   ├── classifier2d_conv2_last.pth
+│   ├── classifier_knots_3d_32.pth
+│   └── classifier_new_spec10.pth
+│
+├── data_generation_for_ML/       # Scripts to generate raw datasets
+│   ├── .ipynb_checkpoints/
+│   ├── generate_flower_fields.py # Generates 2D LG spectra CSVs
+│   └── generate_knot_fields.py   # Creates 3D knot point clouds & CSVs
+│
+├── evaluate_models_trained/      # Evaluation scripts & notebooks
+│   ├── .ipynb_checkpoints/
+│   ├── classifier_models.py      # Shared model definitions for loading
+│   ├── evaluate_models_flowers.ipynb
+│   └── evaluate_models_knots.ipynb
+│
+└── models_training/              # Training notebooks and model definitions
+    ├── .ipynb_checkpoints/
+    ├── classifier_models.py      # PyTorch `Classifier3D` & `Classifier2D`
+    ├── train_flowers_3d.ipynb     # Train spectral (2D) classifiers
+    ├── train_knots_3d.ipynb       # Train 3D knot classifiers
+    └── train_spectral_classifier.ipynb  # Alternate spectral training
+```
+
+---
+
+## 🔧 Prerequisites
+
+* Python 3.8 or later
+* PyTorch 1.10+
+* NumPy, SciPy, tqdm, scikit‑learn, matplotlib, seaborn
+* `extra_functions_package` (custom knot utilities)
+* Jupyter Notebook (for running `.ipynb`)
+
+Install via:
+
+```bash
+pip install torch numpy scipy scikit-learn matplotlib seaborn tqdm
+```
+
+Ensure that `extra_functions_package` is on your `PYTHONPATH` (or install it).
+
+---
+
+## 🗃️ Data Generation
+
+1. **3D Knot Data**
+
+   ```bash
+   python data_generation_for_ML/generate_knot_fields.py
+   ```
+
+   * Builds `fields/` with `.npy` slices and `data_*.csv` containing singularity point lists.
+
+2. **2D Flower (LG Spectrum) Data**
+
+   ```bash
+   python data_generation_for_ML/generate_flower_fields.py
+   ```
+
+   * Produces `data_*_spectr.csv` files with normalized Laguerre–Gaussian moments.
+
+Data outputs are organized by Rytov variance and sample count under `../HOPFS_*` folders.
+
+---
+
+## 🚀 Model Training
+
+Notebooks in `models_training/` demonstrate end‑to‑end training:
+
+* **3D Knot Classifier** (`train_knots_3d.ipynb`)
+  Uses `Classifier3D` to learn from 3D point‑cloud CSVs.
+
+* **Spectral (Flower) Classifier** (`train_flowers_3d.ipynb` & `train_spectral_classifier.ipynb`)
+  Trains `Classifier2D` on flattened LG spectra.
+
+Each notebook covers:
+
+1. Dataset loading & preprocessing
+2. Model instantiation & weight initialization
+3. Training loops with LR scheduling
+4. Loss plotting & checkpoint saving (`*.pth` files)
+
+---
+
+## 📊 Evaluation
+
+Use `evaluate_models_trained/` to load saved checkpoints and visualize performance:
+
+* **Knot Classification** (`evaluate_models_knots.ipynb`)
+* **Flower Beam Classification** (`evaluate_models_flowers.ipynb`)
+
+These notebooks load `classifier_models.py` definitions, run inference on test sets, and plot confusion matrices.
+
+---
+
+## ⭐ Pre‑trained Models
+
+The `best_models/` directory contains:
+
+* Jupyter notebooks used for the final tuning stages.
+* Binary checkpoint files (`.pth`) for 2D and 3D classifiers ready for deployment.
+
+To load a model in Python:
+
+```python
+from best_models.classifier_models import Classifier3D, Classifier2D
+import torch
+
+ckpt = torch.load('best_models/classifier_knots_3d_32.pth')
+model = Classifier3D(
+    ckpt['stages'], ckpt['pooling_configs'], ckpt['num_classes']
+)
+model.load_state_dict(ckpt['model_state_dict'])
+model.eval()
+```
+

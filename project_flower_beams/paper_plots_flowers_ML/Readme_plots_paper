@@ -1,0 +1,51 @@
+# 📊 paper\_plots\_flowers\_ML
+
+This directory contains all plotting scripts used to generate figures for the “Machine Learning Classification of Knots and Flower Beams” paper. Organized by plot type, it includes accuracy-vs-samples curves, stability histograms, confusion matrices, field & dot visualizations for 4‑, 5‑, and 6‑petal beams, braid diagrams, and general utilities.
+
+---
+
+## 📂 Folder Structure
+
+```
+paper_plots_flowers_ML/
+├── accuracy_exp_vs_samples/      # Accuracy vs. sample-size plots
+│        └── plot_acc_vs_samples.py
+│
+├── histograms_plot_stability/    # Stability histograms for Hopf knots
+│        └── hopfs_stability_final.py
+│
+├── plot_5foils_6foils/           # 5‑ and 6‑petal beam comparisons
+│        ├── 5foils/                   # Raw data for 5‑petal beams
+│        ├── 6foils/                   # Raw data for 6‑petal beams
+│        ├── plot_dots_foils_black.py  # Plot singularity dots in black
+│        ├── plot_fields_foils.py      # Plot intensity/phase fields
+│        └── plot_spectrum_foils.py    # Plot LG spectra curves
+│
+├── plot_braids/                  # Braid topologies for trefoil knots
+│        ├── final_plot_braids_trefoil_normal.py  # Render braid diagram
+│        └── trefoil_braids_normal_ar3_no_persp.html  # Exported HTML view
+│
+├── plot_CM/                      # Confusion matrix & error plots
+│        ├── data/                     # Confusion matrix CSV files
+│        ├── CM_errors.py              # Compute & plot classification error bars
+│        ├── plot_4foils_all.py        # CM for 4‑foil classification
+│        ├── plot_knots_all.py         # CM for knot classification
+│        └── plot_MSE_all.py           # Mean-squared-error overview
+│
+├── plot_foils/                   # Detailed foils (flower beam) plotting
+│        ├── data_foils_exp/           # Experimental data
+│        ├── data_foils_noturb/        # No turbulence simulations
+│        ├── data_foils_turb/          # Turbulence simulations
+│        ├── plot_dots_foils*.py       # Singularity dot overlays
+│        ├── plot_fields_foils*.py     # Intensity/phase field visuals
+│        └── plot_spectrum_foils*.py   # LG spectrum comparisons
+│
+├── plot_hopfs/                   # (Optional) additional Hopf knot plots
+│        └── ...
+│
+└── plots_functions_general.py    # Shared helper functions for plotting
+```
+
+---
+
+

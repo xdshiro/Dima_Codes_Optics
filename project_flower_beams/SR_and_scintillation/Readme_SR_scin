@@ -1,0 +1,69 @@
+# SR_and_scintillation
+
+This folder provides two standalone scripts for analyzing atmospheric turbulence effects on optical beams:
+
+1. **scintilation_calculation.py**
+2. **SR_calculation.py**
+
+Both rely on utility functions from `extra_functions_package.all_knots_functions`, so ensure that package is on your `PYTHONPATH`.
+
+---
+
+## 1. scintilation_calculation.py
+
+**Purpose:**  Compute and compare scintillation indices under turbulence.
+
+**Features:**
+
+* **Central-point scintillation index**: Variance-to-mean ratio at the beam center.
+* **Central-zone average**: Computes index over a configurable 7×7 pixel region.
+* **Turbulence parameters**:
+
+  * **Fried parameter (r₀)**: Coherence diameter of atmospheric turbulence.
+  * **Refractive-index structure parameter (Cₙ²)**: Turbulence strength metric.
+
+**Configuration:** At the bottom of the script, adjust:
+
+* Simulation parameters (wavelength, propagation distance, beam waist).
+* Number of Monte Carlo realizations (epochs).
+* Plotting toggles (`plot`, `plot_short`).
+* Region size for averaging (modify the 7×7 zone if needed).
+
+**Usage:**
+
+```bash
+python scintilation_calculation.py
+```
+
+Outputs include printed index values and optional plots of intensity fluctuations.
+
+---
+
+## 2. SR\_calculation.py
+
+**Purpose:**  Calculate the Strehl Ratio (SR) of a beam and key turbulence metrics.
+
+**Features:**
+
+* **Strehl Ratio** via Gaussian-Fourier or phase-screen methods.
+* **Turbulence metrics**: Computation of Fried parameter (r₀) and Cₙ² from Rytov variance.
+* **Epoch control**: Number of SR calculation repeats for statistical averaging.
+* **Optional plotting**: Visualize phase screens or PSF intensity.
+* **Reverse propagation mode**: Swap propagation direction (–L to 0 vs. 0 to L) by toggling code block at end of `run_simulation()`.
+
+**Configuration:** At script bottom, set:
+
+* Beam and turbulence parameters (λ, L, r₀, Cₙ²).
+* Number of epochs and plotting flags.
+* Enable/disable reverse-propagation section.
+
+**Usage:**
+
+```bash
+python SR_calculation.py
+```
+
+Generates SR statistics printed to console and optional plots of PSF or wavefront.
+
+---
+
